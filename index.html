@@ -109,6 +109,7 @@ code{background:rgba(0,0,0,.3);padding:2px 6px;border-radius:6px;font-size:15px;
 .song{display:flex;gap:14px;align-items:center;padding:16px;border-radius:24px;background:var(--ice);color:var(--ink);font-size:22px;font-weight:600}
 .song .note{font-size:44px;animation:hop .6s ease-in-out infinite alternate}
 .songs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stage .links a{font-size:18px;padding:14px 20px}
 .songs button{font-size:16px;min-height:54px;padding:8px 10px}
 .micbig[data-s=speaking]{background:var(--frost);box-shadow:0 0 0 3px var(--gold)}
 @keyframes pulse{to{box-shadow:0 0 0 12px rgba(216,66,90,.3)}}
@@ -312,6 +313,13 @@ const SONGS = {
   we_wish_you: { title: "We Wish You a Merry Christmas", bpm: 160, notes: "G4 1 C5 1 C5 .5 D5 .5 C5 .5 B4 .5 A4 1 A4 1 A4 1 D5 1 D5 .5 E5 .5 D5 .5 C5 .5 B4 1 G4 1 G4 1 E5 1 E5 .5 F5 .5 E5 .5 D5 .5 C5 1 A4 1 G4 .5 G4 .5 A4 1 D5 1 B4 1 C5 2 G4 1 C5 1 C5 .5 D5 .5 C5 .5 B4 .5 A4 1 A4 1 A4 1 D5 1 D5 .5 E5 .5 D5 .5 C5 .5 B4 1 G4 1 G4 1 E5 1 E5 .5 F5 .5 E5 .5 D5 .5 C5 1 A4 1 G4 .5 G4 .5 A4 1 D5 1 B4 1 C5 3" },
   joy_to_the_world: { title: "Joy to the World", bpm: 108, notes: "C5 1 B4 .75 A4 .25 G4 1.5 F4 .5 E4 1 D4 1 C4 1.5 G4 .5 A4 1.5 A4 .5 B4 1.5 B4 .5 C5 1.5 C5 .5 C5 .5 B4 .5 A4 .5 G4 .5 G4 .75 F4 .25 E4 .5 C5 .5 C5 .5 B4 .5 A4 .5 G4 .5 G4 .75 F4 .25 E4 .5 E4 .5 E4 .5 E4 .5 E4 .5 E4 .25 F4 .25 G4 1.5 F4 .25 E4 .25 D4 .5 D4 .5 D4 .5 D4 .25 E4 .25 F4 1.5 E4 .25 D4 .25 C4 .5 C5 1 A4 .5 G4 .75 F4 .25 E4 .5 F4 .5 E4 1 D4 1 C4 2" },
   carol_of_the_bells: { title: "Carol of the Bells", bpm: 176, notes: "A#4 1 A4 .5 A#4 .5 G4 1 A#4 1 A4 .5 A#4 .5 G4 1 A#4 1 A4 .5 A#4 .5 G4 1 A#4 1 A4 .5 A#4 .5 G4 1 A#4 1 A4 .5 A#4 .5 G4 1 A#4 1 A4 .5 A#4 .5 G4 1 A#4 1 A4 .5 A#4 .5 G4 1 A#4 1 A4 .5 A#4 .5 G4 1 D5 1 C5 .5 D5 .5 A#4 1 D5 1 C5 .5 D5 .5 A#4 1 D5 1 C5 .5 D5 .5 A#4 1 D5 1 C5 .5 D5 .5 A#4 1 G5 1 G5 .5 G5 .5 F5 .5 D#5 .5 D5 1 D5 .5 D5 .5 C5 .5 A#4 .5 C5 1 C5 .5 C5 .5 D5 .5 C5 .5 G4 1 G4 .5 G4 .5 G4 .5 G4 .5 G5 1 G5 .5 G5 .5 F5 .5 D#5 .5 D5 1 D5 .5 D5 .5 C5 .5 A#4 .5 C5 1 C5 .5 C5 .5 D5 .5 C5 .5 G4 1 G4 .5 G4 .5 G4 .5 G4 .5 D4 .5 E4 .5 F#4 .5 G4 .5 A4 .5 A#4 .5 C5 .5 D5 .5 C5 1 A#4 1 D4 .5 E4 .5 F#4 .5 G4 .5 A4 .5 A#4 .5 C5 .5 D5 .5 C5 1 A#4 1 A#4 1 A4 .5 A#4 .5 G4 1 A#4 1 A4 .5 A#4 .5 G4 1 A#4 1 A4 .5 A#4 .5 G4 1 A#4 1 A4 .5 A#4 .5 G4 1 G4 3" },
+  o_come_all_ye_faithful: { title: "O Come All Ye Faithful", bpm: 132, notes: "G4 1 G4 2 D4 1 G4 1 A4 2 D4 2 B4 1 A4 1 B4 1 C5 1 B4 2 A4 1 G4 1 G4 2 F#4 1 E4 1 F#4 1 G4 1 A4 1 B4 1 F#4 2 E4 1.5 D4 .5 D4 4 D5 2 C5 1 B4 1 C5 2 B4 2 A4 1 B4 1 G4 1 A4 1 F#4 1.5 E4 .5 D4 1 G4 1 G4 1 F#4 1 G4 1 A4 1 G4 2 D4 1 B4 1 B4 1 A4 1 B4 1 C5 1 B4 2 A4 1 B4 1 C5 1 B4 1 A4 1 G4 1 F#4 2 G4 1 C5 1 B4 2 A4 1.5 G4 .5 G4 4" },
+  the_first_noel: { title: "The First Noel", bpm: 126, notes: "E4 .5 D4 .5 C4 1.5 D4 .5 E4 .5 F4 .5 G4 2 A4 .5 B4 .5 C5 1 B4 1 A4 1 G4 2 A4 .5 B4 .5 C5 1 B4 1 A4 1 G4 1 A4 1 B4 1 C5 1 G4 1 F4 1 E4 2 E4 .5 D4 .5 C4 1.5 D4 .5 E4 .5 F4 .5 G4 2 A4 .5 B4 .5 C5 1 B4 1 A4 1 G4 2 A4 .5 B4 .5 C5 1 B4 1 A4 1 G4 1 A4 1 B4 1 C5 1 G4 1 F4 1 E4 2 E4 .5 D4 .5 C4 1.5 D4 .5 E4 .5 F4 .5 G4 2 C5 .5 B4 .5 A4 2 A4 1 G4 3 C5 1 B4 1 A4 1 G4 1 A4 1 B4 1 C5 1 G4 1 F4 1 E4 3" },
+  away_in_a_manger: { title: "Away in a Manger", bpm: 112, notes: "C5 1 C5 1.5 A#4 .5 A4 1 A4 1 G4 1 F4 1 F4 1 E4 1 D4 1 C4 2 C4 1 C4 1.5 D4 .5 C4 1 C4 1 G4 1 E4 1 D4 1 C4 1 F4 1 A4 2 C5 1 C5 1.5 A#4 .5 A4 1 A4 1 G4 1 F4 1 F4 1 E4 1 D4 1 C4 2 C4 1 A#4 1.5 A4 .5 G4 1 A4 1 G4 1 F4 1 G4 1 D4 1 E4 1 F4 3" },
+  hark_the_herald: { title: "Hark! The Herald Angels Sing", bpm: 132, notes: "D4 1 G4 1 G4 1.5 F#4 .5 G4 1 B4 1 B4 1 A4 1 D5 1 D5 1 D5 1.5 C5 .5 B4 1 A4 1 B4 2 D4 1 G4 1 G4 1.5 F#4 .5 G4 1 B4 1 B4 1 A4 1 D5 1 A4 1 A4 1.5 F#4 .5 F#4 1 E4 1 D4 2 D5 1 D5 1 D5 1 G4 1 C5 1 B4 1 B4 1 A4 1 D5 1 D5 1 D5 1 G4 1 C5 1 B4 1 B4 1 A4 1 E5 1 E5 1 E5 1 D5 1 C5 1 B4 1 C5 2 A4 1 B4 .5 C5 .5 D5 1.5 G4 .5 G4 1 A4 1 B4 2 E5 1.5 E5 .5 E5 1 D5 1 C5 1 B4 1 C5 2 A4 1 B4 .5 C5 .5 D5 1.5 G4 .5 G4 1 A4 1 G4 2" },
+  good_king_wenceslas: { title: "Good King Wenceslas", bpm: 152, notes: "G4 1 G4 1 G4 1 A4 1 G4 1 G4 1 D4 2 E4 1 D4 1 E4 1 F#4 1 G4 2 G4 2 G4 1 G4 1 G4 1 A4 1 G4 1 G4 1 D4 2 E4 1 D4 1 E4 1 F#4 1 G4 2 G4 2 D5 1 C5 1 B4 1 A4 1 B4 1 A4 1 G4 2 E4 1 D4 1 E4 1 F#4 1 G4 2 G4 2 D4 1 D4 1 E4 1 F#4 1 G4 1 G4 1 A4 2 D5 1 C5 1 B4 1 A4 1 G4 2 C5 2 G4 4" },
+  we_three_kings: { title: "We Three Kings", bpm: 150, notes: "B4 2 A4 1 G4 2 E4 1 F#4 1 G4 1 F#4 1 E4 3 B4 2 A4 1 G4 2 E4 1 F#4 1 G4 1 F#4 1 E4 3 G4 2 G4 1 A4 2 A4 1 B4 2 B4 1 D5 1 C5 1 B4 1 A4 1 B4 1 A4 1 G4 2 F#4 1 E4 3" },
+  o_christmas_tree: { title: "O Christmas Tree", bpm: 108, notes: "D4 1 G4 .75 G4 .25 G4 1.5 A4 .5 B4 .75 B4 .25 B4 1.5 B4 .5 A4 .5 B4 .5 C5 1 F#4 1 A4 1 G4 1.5 D4 .5 G4 .75 G4 .25 G4 1.5 A4 .5 B4 .75 B4 .25 B4 1.5 B4 .5 A4 .5 B4 .5 C5 1 F#4 1 A4 1 G4 1.5 D5 .5 D5 .5 B4 .5 E5 1.5 D5 .5 D5 .5 C5 .5 C5 1.5 C5 .5 C5 .5 A4 .5 D5 1.5 C5 .5 C5 .5 B4 .5 B4 1.5 D4 .5 G4 .75 G4 .25 G4 1.5 A4 .5 B4 .75 B4 .25 B4 1.5 B4 .5 A4 .5 B4 .5 C5 1 F#4 1 A4 1 G4 2" },
   jolly_old_saint_nicholas: { title: "Jolly Old Saint Nicholas", bpm: 152, notes: "B4 1 B4 1 B4 1 B4 1 A4 1 A4 1 A4 2 G4 1 G4 1 G4 1 G4 1 B4 4 E4 1 E4 1 E4 1 E4 1 D4 1 D4 1 G4 2 A4 1 G4 1 A4 1 B4 1 G4 4 B4 1 B4 1 B4 1 B4 1 A4 1 A4 1 A4 2 G4 1 G4 1 G4 1 G4 1 B4 4 E4 1 E4 1 E4 1 E4 1 D4 1 D4 1 G4 2 A4 1 G4 1 A4 1 B4 1 G4 4" }
 };
 const songList = () => Object.keys(SONGS).map(k => ({ key: k, title: SONGS[k].title }));
@@ -458,7 +466,19 @@ async function handle(resp, tok) {
   if (a && a.type === "options") return showOptions(a.wish, [], tok);
   if (a && a.type === "bye") return hangUp();
   if (a && a.type === "music") return playMusic(a.song, tok);
+  if (a && a.type === "songlink") return showSongLinks(a.query, tok);
   listen();
+}
+// a song the music box cannot play: offer to open it where it is properly licensed
+function showSongLinks(query, tok) {
+  if (!alive(tok) || !query) return listen();
+  call.panelOpen = true; setMode("idle", "Ask a grown-up to tap");
+  const q = encodeURIComponent(query);
+  stage.replaceChildren(h("div", { class: "song" }, h("span", {}, "🎶"), h("span", {}, query)),
+    h("div", { class: "links" },
+      h("a", { href: "https://www.youtube.com/results?search_query=" + q, target: "_blank", rel: "noopener" }, "Open on YouTube"),
+      h("a", { href: "https://open.spotify.com/search/" + q, target: "_blank", rel: "noopener" }, "Open on Spotify")),
+    h("button", { class: "btn-quiet", type: "button", onclick: () => { call.panelOpen = false; stage.replaceChildren(); listen(); } }, "Keep talking"));
 }
 async function playMusic(key, tok) {
   if (!alive(tok)) return;
