@@ -319,15 +319,17 @@ async function playSpeech(b64) {
 }
 
 /* ---------- microphone ---------- */
-let stream = null, actx = null, analyser = null, rec = null, vadTimer = 0, micOk = false;
+let stream = null, actx = null, analyser = null, rec = null, vadTimer = 0, micOk = false, micInfo = "not tried yet on this device";
+function wakeAudio() { try { actx = actx && actx.state !== "closed" ? actx : new (window.AudioContext || window.webkitAudioContext)(); if (actx.state !== "running" && actx.resume) actx.resume().catch(() => {}); } catch (e) {} }
 async function getMic() {
   if (stream) return true;
-  if (!navigator.mediaDevices || !window.MediaRecorder) return false;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
-    if (actx) { const src = actx.createMediaStreamSource(stream); analyser = actx.createAnalyser(); analyser.fftSize = 1024; src.connect(analyser); }
-    return true;
-  } catch (e) { stream = null; return false; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { micInfo = "this browser offers no microphone access"; return false; }
+  if (!window.MediaRecorder) { micInfo = "this browser cannot record audio"; return false; }
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
+  catch (e) { stream = null; micInfo = "blocked (" + ((e && e.name) || "error") + ")"; return false; }
+  micInfo = "allowed";
+  try { wakeAudio(); const src = actx.createMediaStreamSource(stream); analyser = actx.createAnalyser(); analyser.fftSize = 1024; src.connect(analyser); } catch (e) { analyser = null; }
+  return true;
 }
 function dropMic() { if (stream) { for (const t of stream.getTracks()) t.stop(); stream = null; } analyser = null; }
 const recMime = () => ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || "";
@@ -351,7 +353,7 @@ async function startCall(id) {
   fixKid(); if (!curKid || call) return;
   // these three lines must run inside the tap, or phones refuse to play sound later
   player.src = SILENT; const pr = player.play(); if (pr && pr.catch) pr.catch(() => {});
-  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume && actx.resume(); } catch (e) {}
+  wakeAudio();
   try { if (navigator.audioSession) navigator.audioSession.type = "play-and-record"; } catch (e) {}
 
   const ch = CH[id], tok = String(Date.now()) + Math.random();
@@ -384,7 +386,7 @@ function hangUp() {
 function lineTrouble(e) {
   if (e && e.kind === "wrong_code") { hangUp(); code = ""; store.set("npp-code", null); boot(); return; }
   bubble("Oh no, the North Pole phone line is crackly! Tap the microphone to try again.");
-  stage.replaceChildren(); setMode("idle", micOk ? "Tap the microphone to talk" : "Tap the keyboard or the gift");
+  stage.replaceChildren(); setMode("idle", micOk ? "Tap the microphone to talk" : "Microphone is off. Tap the keyboard to type.");
 }
 async function handle(resp, tok) {
   if (!alive(tok)) return;
@@ -408,35 +410,42 @@ async function send(payload) {
 }
 function listen() {
   if (!call || call.panelOpen) return;
-  if (!stream || !micOk) { setMode("idle", "Tap the keyboard or the gift"); return; }
+  if (!stream || !micOk) { setMode("idle", "Microphone is off. Tap the keyboard to type."); return; }
+  wakeAudio();
   const tok = call.tok, mime = recMime(), chunks = [];
   try { rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream); } catch (e) { micOk = false; setMode("idle", "Tap the keyboard or the gift"); return; }
   rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
-  const t0 = Date.now(); let started = false, speechMs = 0, lastSpeech = 0, floor = 0, frames = 0;
+  const t0 = Date.now(); let started = false, speechMs = 0, lastSpeech = 0, floor = 0, frames = 0, peak = 0;
   const buf = analyser ? new Uint8Array(analyser.fftSize) : null;
+  let manual = !buf;   // no sound level available: record until the mic is tapped again (or 8 seconds)
+  const MANUAL = "Listening… tap the microphone when you finish";
   const finish = sendIt => {
     clearInterval(vadTimer); if (!rec || rec.state === "inactive") return;
     const r = rec;
     r.onstop = () => {
       if (!alive(tok)) return;
       const blob = new Blob(chunks, { type: r.mimeType || mime || "audio/webm" });
+      micInfo = "allowed; " + (manual ? "no sound level, so it waits for a tap or 8 seconds" : "sound level working") + "; last recording " + blob.size + " bytes" + (sendIt ? ", sent" : ", not sent");
       if (sendIt && blob.size > 1500) toB64(blob).then(b => send({ audio: b, mime: blob.type }), () => setMode("idle", "Tap the microphone to talk"));
       else setMode("idle", "Tap the microphone to talk");
     };
     try { r.stop(); } catch (e) { setMode("idle", "Tap the microphone to talk"); }
   };
   call.finish = finish;
-  rec.start(); setMode("listening", "Listening…");
+  rec.start(); setMode("listening", manual ? MANUAL : "Listening…");
   vadTimer = setInterval(() => {
     if (!alive(tok)) { clearInterval(vadTimer); return; }
     const now = Date.now(), el = now - t0;
-    if (buf && analyser) {
+    if (!manual) {
       analyser.getByteTimeDomainData(buf); let sum = 0;
-      for (let i = 0; i < buf.length; i++) { const x = (buf[i] - 128) / 128; sum += x * x; }
+      for (let i = 0; i < buf.length; i++) { const x = (buf[i] - 128) / 128; sum += x * x; if (x > peak || -x > peak) peak = Math.abs(x); }
       const rms = Math.sqrt(sum / buf.length);
       if (frames < 6) { floor += rms / 6; frames++; }
-      else if (rms > Math.min(0.08, Math.max(0.025, floor * 2.200))) { started = true; speechMs += 60; lastSpeech = now; }
+      else if (rms > Math.min(0.06, Math.max(0.018, floor * 2))) { started = true; speechMs += 60; lastSpeech = now; }
+      // a flat line means the phone is not giving us a sound level; fall back to tap-to-finish
+      if (el > 800 && (peak < 0.004 || (actx && actx.state !== "running"))) { manual = true; setMode("listening", MANUAL); }
     }
+    if (manual) { if (el > 8000) finish(true); return; }
     if (started && speechMs >= 240 && now - lastSpeech > 1300) finish(true);
     else if (!started && el > 9000) finish(false);
     else if (el > 16000) finish(started);
@@ -591,7 +600,19 @@ function renderParent() {
 
   const diag = h("div", { class: "panel" }, h("h3", {}, "Setup check"));
   const out = h("div", { class: "small" }, lastError ? "Last problem: " + lastError : "No problems seen on this device.");
-  diag.append(out, h("div", { class: "row wrap" },
+  const micLine = h("p", { class: "small" }, "Microphone: " + micInfo);
+  const micTest = h("button", { class: "btn-quiet", type: "button", onclick: async () => {
+    micTest.disabled = true; wakeAudio(); micLine.textContent = "Microphone: asking the phone…";
+    const ok = await getMic();
+    if (!ok) { micLine.textContent = "Microphone: " + micInfo + ". On an iPhone, open Settings, find this browser (Chrome or Safari), switch Microphone on, then reload this page."; micTest.disabled = false; return; }
+    micLine.textContent = "Microphone: allowed. Say something for 3 seconds…";
+    let peak = 0; const buf = analyser ? new Uint8Array(analyser.fftSize) : null;
+    const t = setInterval(() => { if (!buf) return; analyser.getByteTimeDomainData(buf); for (let i = 0; i < buf.length; i++) { const x = Math.abs((buf[i] - 128) / 128); if (x > peak) peak = x; } }, 60);
+    setTimeout(() => { clearInterval(t); dropMic();
+      micInfo = "allowed; " + (peak >= 0.004 ? "sound level working (loudest " + Math.round(peak * 100) + "%)" : "no sound level, so calls wait for a tap or 8 seconds");
+      micLine.textContent = "Microphone: " + micInfo; micTest.disabled = false; }, 3000);
+  } }, "Test the microphone");
+  diag.append(out, micLine, micTest, h("div", { class: "row wrap" },
     h("button", { class: "btn-quiet", type: "button", onclick: async ev => {
       const b = ev.currentTarget; b.disabled = true; out.textContent = "Checking…";
       try { const d = await api("test"); out.replaceChildren(...Object.entries(d.test).map(([k, v]) => h("p", {}, k + ": " + v)), h("p", { class: "muted" }, "Model: " + d.model)); } catch (e) { out.textContent = lastError; }
