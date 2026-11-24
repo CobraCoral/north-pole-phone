@@ -32,6 +32,7 @@ body{
 .view{display:none;flex:1;min-height:0;flex-direction:column;padding:16px;gap:14px}
 .view.on{display:flex}
 .scroll{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding-bottom:8px}
+.scroll>*{flex-shrink:0}
 h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.05}
 h1{font-size:44px;color:var(--gold);letter-spacing:.5px}
 h2{font-size:30px} h3{font-size:24px}
@@ -77,6 +78,7 @@ code{background:rgba(0,0,0,.3);padding:2px 6px;border-radius:6px;font-size:15px;
 @keyframes talk{from{transform:scaleY(.5)}to{transform:scaleY(2.2)}}
 .bubble{background:var(--ice);color:var(--ink);border-radius:24px;padding:14px 18px;font-size:22px;font-weight:500;position:relative;min-height:60px}
 .bubble::before{content:"";position:absolute;top:-10px;left:50%;margin-left:-10px;border:10px solid transparent;border-top:0;border-bottom-color:var(--ice)}
+.bubble-text{max-height:6.750em;overflow-y:auto;-webkit-overflow-scrolling:touch;overflow-wrap:anywhere}
 .heard{align-self:flex-end;background:var(--frost);border-radius:18px;padding:8px 14px;font-size:16px;max-width:85%}
 .stage{display:flex;flex-direction:column;gap:12px}
 .choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -153,7 +155,7 @@ ol.steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
       <div class="speaker"><div class="face" id="callFace"></div></div>
     </div>
     <div class="scroll" id="callScroll">
-      <div class="bubble" id="bubble" aria-live="polite" hidden></div>
+      <div class="bubble" id="bubble" aria-live="polite" hidden><div class="bubble-text" id="bubbleText"></div></div>
       <div class="heard" id="heard" hidden></div>
       <div class="stage" id="stage"></div>
     </div>
@@ -313,7 +315,9 @@ async function playSpeech(b64) {
   let url;
   try { const bin = atob(b64), bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i); url = URL.createObjectURL(new Blob([bytes], { type: "audio/mpeg" })); } catch (e) { return false; }
   $("call").classList.add("talking");
+  const stopFollow = followSpeech();
   const ok = await playUrl(url);
+  stopFollow();
   $("call").classList.remove("talking"); URL.revokeObjectURL(url);
   return ok;
 }
@@ -346,7 +350,19 @@ function paintStatus() {
   if (call.t0) { const s = Math.floor((Date.now() - call.t0) / 1000); t = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") + (t ? " · " + t : ""); }
   $("callStatus").textContent = t;
 }
-function bubble(text) { const b = $("bubble"); b.hidden = false; b.textContent = text; $("callScroll").scrollTop = 0; }
+function bubble(text) { const b = $("bubble"), t = $("bubbleText"); b.hidden = false; t.textContent = text; t.scrollTop = 0; $("callScroll").scrollTop = 0; }
+// while a character speaks, keep the words being said in view inside the bubble
+function followSpeech() {
+  const t = $("bubbleText"); let on = true;
+  const step = () => {
+    if (!on) return;
+    const max = t.scrollHeight - t.clientHeight, d = player.duration;
+    if (max > 0 && isFinite(d) && d > 0) t.scrollTop = Math.max(0, Math.min(max, (player.currentTime / d) * t.scrollHeight - t.clientHeight / 2));
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+  return () => { on = false; };
+}
 function heardNote(text) { const e = $("heard"); e.hidden = !text; e.textContent = text ? "You said: " + text : ""; }
 
 async function startCall(id) {
