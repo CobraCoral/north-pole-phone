@@ -615,7 +615,7 @@ function renderParent() {
   diag.append(out, micLine, micTest, h("div", { class: "row wrap" },
     h("button", { class: "btn-quiet", type: "button", onclick: async ev => {
       const b = ev.currentTarget; b.disabled = true; out.textContent = "Checking…";
-      try { const d = await api("test"); out.replaceChildren(...Object.entries(d.test).map(([k, v]) => h("p", {}, k + ": " + v)), h("p", { class: "muted" }, "Model: " + d.model)); } catch (e) { out.textContent = lastError; }
+      try { const d = await api("test"); const before = lastError; out.replaceChildren(...Object.entries(d.test).map(([k, v]) => h("p", {}, k + ": " + v)), h("p", { class: "muted" }, "Model: " + d.model), before ? h("p", {}, "Last problem: " + before) : ""); } catch (e) { out.textContent = lastError; }
       b.disabled = false;
     } }, "Run the check"),
     h("button", { class: "btn-quiet", type: "button", onclick: () => { code = ""; store.set("npp-code", null); unlocked = false; boot(); } }, "Forget passcode on this device")));

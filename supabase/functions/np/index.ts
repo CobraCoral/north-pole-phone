@@ -100,7 +100,7 @@ async function stt(audioB64: string, mime: string): Promise<string> {
   form.append("model_id", "scribe_v2");
   form.append("language_code", "en");
   form.append("tag_audio_events", "false");
-  form.append("file", new Blob([bytes], { type: mime || "audio/webm" }), mime.includes("mp4") ? "talk.mp4" : "talk.webm");
+  form.append("file", new Blob([bytes], { type: mime || "audio/webm" }), mime.includes("mp4") ? "talk.mp4" : mime.includes("wav") ? "talk.wav" : "talk.webm");
   const r = await fetch(`${EL}/v1/speech-to-text`, { method: "POST", headers: { "xi-api-key": env("ELEVENLABS_API_KEY") }, body: form });
   if (!r.ok) throw new Upstream("elevenlabs", `listening ${r.status} ${(await r.text()).slice(0, 200)}`);
   const d = await r.json();
@@ -260,11 +260,21 @@ async function pick(p: any) {
   return json({ say, audio: await tts(p.character, say), wishes: (await loadState()).wishes });
 }
 
+function testWav(): Uint8Array {
+  const rate = 16000, n = rate * 0.6, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+  const w = (o: number, t: string) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+  w(0, "RIFF"); v.setUint32(4, 36 + n * 2, true); w(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.sin(2 * Math.PI * 440 * i / rate) * 3000, true);
+  return new Uint8Array(buf);
+}
 async function selfTest() {
   const out: Record<string, string> = {};
   try { await loadState(); out.database = "ok"; } catch (e) { out.database = String(e).slice(0, 200); }
   try { await claude({ max_tokens: 5, messages: [{ role: "user", content: "Say hi" }] }); out.anthropic = "ok"; } catch (e) { out.anthropic = String(e).slice(0, 300); }
   try { const v = await elVoices(); out.elevenlabs = v.length ? "ok" : "no voices in this account"; } catch (e) { out.elevenlabs = String(e).slice(0, 300); }
+  try { const a = await tts("santa", "Ho ho ho."); out["speaking (text to speech)"] = a.length > 500 ? "ok" : "empty audio"; } catch (e) { out["speaking (text to speech)"] = String(e).slice(0, 300); }
+  try { await stt(encodeBase64(testWav()), "audio/wav"); out["listening (speech to text)"] = "ok"; } catch (e) { out["listening (speech to text)"] = String(e).slice(0, 300); }
   return json({ test: out, model: MODEL() });
 }
 
@@ -316,7 +326,8 @@ Deno.serve(async (req) => {
       default: return json({ error: "unknown_action" }, 400);
     }
   } catch (e) {
-    if (e instanceof Upstream) return json({ error: "upstream", service: e.service, detail: e.detail }, 502);
+    if (e instanceof Upstream) { console.error("upstream", p.action, e.service, e.detail); return json({ error: "upstream", service: e.service, detail: e.detail }, 502); }
+    console.error("server", p.action, String(e).slice(0, 300));
     return json({ error: "server", detail: String(e).slice(0, 300) }, 500);
   }
 });
