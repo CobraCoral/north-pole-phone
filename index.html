@@ -386,13 +386,18 @@ async function getMic() {
   if (stream) return true;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { micInfo = "this browser offers no microphone access"; return false; }
   if (!window.MediaRecorder) { micInfo = "this browser cannot record audio"; return false; }
+  try { if (navigator.audioSession) navigator.audioSession.type = "play-and-record"; } catch (e) {}
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
   catch (e) { stream = null; micInfo = "blocked (" + ((e && e.name) || "error") + ")"; return false; }
   micInfo = "allowed";
   try { wakeAudio(); const src = actx.createMediaStreamSource(stream); analyser = actx.createAnalyser(); analyser.fftSize = 1024; src.connect(analyser); } catch (e) { analyser = null; }
   return true;
 }
-function dropMic() { if (stream) { for (const t of stream.getTracks()) t.stop(); stream = null; } analyser = null; }
+function dropMic() {
+  if (stream) { for (const t of stream.getTracks()) t.stop(); stream = null; } analyser = null;
+  // with the microphone released the phone goes back to full-quality playback (an open mic makes speech and music crackle)
+  try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
+}
 const recMime = () => ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || "";
 const toB64 = blob => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1] || ""); fr.onerror = rej; fr.readAsDataURL(blob); });
 
@@ -427,7 +432,6 @@ async function startCall(id) {
   // these three lines must run inside the tap, or phones refuse to play sound later
   player.src = SILENT; const pr = player.play(); if (pr && pr.catch) pr.catch(() => {});
   wakeAudio();
-  try { if (navigator.audioSession) navigator.audioSession.type = "play-and-record"; } catch (e) {}
 
   const ch = CH[id], tok = String(Date.now()) + Math.random();
   call = { id, ch, kid: kidById(curKid), tok, t0: 0, tick: 0, history: [], mode: "ringing", label: "Calling…" };
@@ -438,7 +442,7 @@ async function startCall(id) {
 
   let first = null, failed = null;
   const startP = api("talk", { event: "start", character: id, kidId: call.kid.id, history: [], songs: songList() }).then(r => { first = r; }, e => { failed = e; });
-  const micP = getMic().then(ok => { micOk = ok; });
+  const micP = getMic().then(ok => { micOk = ok; dropMic(); });   // ask permission now, but keep the mic closed while sound plays
   for (let i = 0; i < 4 && alive(tok) && (i === 0 || (!first && !failed)); i++) await playUrl(RING, 3500);
   await Promise.all([startP, micP]);
   if (!alive(tok)) return;
@@ -507,11 +511,15 @@ async function send(payload) {
   try { const resp = await api("talk", { character: call.id, kidId: call.kid.id, history: call.history, songs: songList(), ...payload }); if (alive(tok)) { stage.replaceChildren(); await handle(resp, tok); } }
   catch (e) { if (alive(tok)) lineTrouble(e); }
 }
-function listen() {
+async function listen() {
   if (!call || call.panelOpen) return;
-  if (!stream || !micOk) { setMode("idle", "Microphone is off. Tap the keyboard to type."); return; }
-  wakeAudio();
+  if (!micOk) { setMode("idle", "Microphone is off. Tap the keyboard to type."); return; }
   const tok = call.tok, mime = recMime(), chunks = [];
+  setMode("thinking", "Getting ready to listen…");
+  micOk = await getMic();          // the mic is opened only while listening
+  if (!alive(tok)) { dropMic(); return; }
+  if (!micOk || call.panelOpen || call.mode !== "thinking") { dropMic(); if (call.mode === "thinking") setMode("idle", micOk ? "Tap the microphone to talk" : "Microphone is off. Tap the keyboard to type."); return; }
+  wakeAudio();
   try { rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream); } catch (e) { micOk = false; setMode("idle", "Tap the keyboard or the gift"); return; }
   rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
   const t0 = Date.now(); let started = false, speechMs = 0, lastSpeech = 0, floor = 0, frames = 0, peak = 0;
@@ -522,6 +530,7 @@ function listen() {
     clearInterval(vadTimer); if (!rec || rec.state === "inactive") return;
     const r = rec;
     r.onstop = () => {
+      dropMic();
       if (!alive(tok)) return;
       const blob = new Blob(chunks, { type: r.mimeType || mime || "audio/webm" });
       micInfo = "allowed; " + (manual ? "no sound level, so it waits for a tap or 8 seconds" : "sound level working") + "; last recording " + blob.size + " bytes" + (sendIt ? ", sent" : ", not sent");
@@ -729,7 +738,7 @@ $("mic").addEventListener("click", () => {
   if (!call) return;
   if (call.mode === "listening") stopListening(true);
   else if (call.mode === "speaking" || call.mode === "music") stopAudio();
-  else if (call.mode === "idle") { if (stream && micOk) { call.panelOpen = false; stage.replaceChildren(); listen(); } else openPanel("type"); }
+  else if (call.mode === "idle") { if (micOk) { call.panelOpen = false; stage.replaceChildren(); listen(); } else openPanel("type"); }
 });
 $("ideasBtn").addEventListener("click", () => openPanel("ideas"));
 $("listBtn").addEventListener("click", () => openPanel("list"));
