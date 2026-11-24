@@ -46,6 +46,16 @@ const CH: Record<string, Ch> = {
 };
 
 const str = (v: unknown, n: number) => (typeof v === "string" ? v : "").slice(0, n);
+// The app sends the tunes its music box can play; this is the fallback list.
+const DEFAULT_SONGS = [
+  { key: "jingle_bells", title: "Jingle Bells" }, { key: "deck_the_halls", title: "Deck the Halls" }, { key: "silent_night", title: "Silent Night" },
+  { key: "we_wish_you", title: "We Wish You a Merry Christmas" }, { key: "joy_to_the_world", title: "Joy to the World" }, { key: "jolly_old_saint_nicholas", title: "Jolly Old Saint Nicholas" },
+];
+function songsFrom(v: unknown) {
+  const list = (Array.isArray(v) ? v : []).filter((x: any) => x && /^[a-z_]{1,40}$/.test(x.key ?? "") && typeof x.title === "string" && x.title.trim())
+    .slice(0, 40).map((x: any) => ({ key: x.key as string, title: (x.title as string).replace(/[^\w ',!&-]/g, "").slice(0, 60) }));
+  return list.length ? list : DEFAULT_SONGS;
+}
 
 // ---------- ElevenLabs ----------
 const EL = "https://api.elevenlabs.io";
@@ -152,6 +162,7 @@ async function talk(p: any) {
     .slice(-24).map((m: any) => ({ role: m.role, content: m.content.slice(0, 500) }));
   while (history.length && history[0].role !== "user") history.shift();
 
+  const songs = songsFrom(p.songs);
   const list = mine.length ? mine.map((w, i) => `${i + 1}. ${w.name}`).join("\n") : "(empty)";
   const system = `You are ${c.persona}
 You are on a pretend phone call inside a family's Christmas app with ${kid.name}, a young girl between 4 and 8 years old. Everything you write is spoken aloud by a voice, so write only the words you say: no stage directions, no emoji, no asterisks, no lists.
@@ -165,7 +176,7 @@ Rules:
 - Only when she clearly says she WANTS something for Christmas, or asks to add something to her list, say one short excited line and call show_gift_options with what she wants. The app then shows her pictures to choose from, so do not describe products yourself. Just talking about a toy or an animal is not a wish; if you are unsure, ask whether she would like it on her list.
 - Never promise that she will get a gift. Say you will put it on the list, or that you will see what the elves can do.
 - If she asks what is on her list, read it to her. If she wants something taken off, call remove_from_list with its number and tell her it is crossed off.
-- You have a music box that plays these tunes: Jingle Bells, Deck the Halls, Silent Night, We Wish You a Merry Christmas, Joy to the World, and Jolly Old Saint Nicholas. When she asks for music, a song or a carol, say one short happy line and call play_music with the closest tune, or "surprise" if she does not name one. If she asks for a song you do not have, kindly say your music box does not know that one and offer one it does. You cannot sing, and you do not recite the words of modern songs.
+- You have a music box that plays only these tunes: ${songs.map((x) => x.title).join("; ")}. When she asks for music, a song or a carol, say one short happy line and call play_music with the closest tune, or "surprise" if she does not name one. If she asks for a song you do not have, kindly say your music box does not know that one and offer one it does. You cannot sing, and you do not recite the words of modern songs.
 - When she says goodbye or wants to stop, say a short goodbye and call end_call.
 - Never ask for or repeat personal details such as an address, school name, last name or password, and never suggest keeping secrets from her parents. If she brings up something worrying, unsafe or grown-up, or asks about health or anything that needs an adult, gently say that is a good thing to ask Mom or Dad, then move to something cheerful.
 - If she asks for something unsafe or something that is not a gift (a real animal, a weapon), cheerfully steer to a toy version.
@@ -183,7 +194,7 @@ ${list}`;
       { name: "remove_from_list", description: "Take one item off her Christmas list.",
         input_schema: { type: "object", properties: { item_number: { type: "integer", description: "The number of the item in her list" } }, required: ["item_number"] } },
       { name: "play_music", description: "Play a music-box Christmas tune for the child after you say a short line.",
-        input_schema: { type: "object", properties: { song: { type: "string", enum: ["jingle_bells", "deck_the_halls", "silent_night", "we_wish_you", "joy_to_the_world", "jolly_old_saint_nicholas", "surprise"] } }, required: ["song"] } },
+        input_schema: { type: "object", properties: { song: { type: "string", enum: [...songs.map((x) => x.key), "surprise"] } }, required: ["song"] } },
       { name: "end_call", description: "End the phone call after saying goodbye.", input_schema: { type: "object", properties: {} } },
     ],
   });
