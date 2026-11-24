@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0c2433">
+<title>North Pole Phone</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Mountains+of+Christmas:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: dark;
+  --night:#0c2433; --night-2:#15404f; --ice:#e9f4f3; --frost:rgba(233,244,243,.12);
+  --berry:#d8425a; --pine:#35a37b; --gold:#f4c95d; --ink:#10222c;
+  --display:"Mountains of Christmas","Fredoka",ui-rounded,system-ui,sans-serif;
+  --body:"Fredoka",ui-rounded,"Segoe UI",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background:
+    radial-gradient(120% 60% at 20% 0%, rgba(53,163,123,.35), transparent 60%),
+    radial-gradient(90% 50% at 90% 10%, rgba(244,201,93,.14), transparent 60%),
+    linear-gradient(180deg,var(--night) 0%,var(--night-2) 100%);
+  background-color:var(--night); color:var(--ice); font-family:var(--body); font-size:18px; line-height:1.35; overflow:hidden;
+  -webkit-tap-highlight-color:transparent;
+}
+#snow{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;opacity:.7}
+#app{position:relative;height:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column}
+.view{display:none;flex:1;min-height:0;flex-direction:column;padding:16px;gap:14px}
+.view.on{display:flex}
+.scroll{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding-bottom:8px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.05}
+h1{font-size:44px;color:var(--gold);letter-spacing:.5px}
+h2{font-size:30px} h3{font-size:24px}
+p{margin:0}
+.muted{opacity:.75;font-size:15px}
+.small{font-size:14px}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;border-radius:18px;padding:14px 18px;background:var(--frost);font-weight:500;min-height:54px}
+button:active{transform:scale(.97)}
+button:disabled{opacity:.5}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.btn-main{background:var(--pine);color:#fff;font-weight:600}
+.btn-berry{background:var(--berry);color:#fff;font-weight:600}
+.btn-quiet{background:transparent;border:1.5px solid var(--frost);min-height:44px;padding:8px 14px;font-size:15px}
+input[type=text],input[type=number],input[type=url],input[type=password],select{background:rgba(0,0,0,.25);border:1.5px solid var(--frost);border-radius:16px;padding:12px 14px;min-height:54px;width:100%;min-width:0}
+select option{color:#10222c}
+input::placeholder{color:rgba(233,244,243,.55)}
+code{background:rgba(0,0,0,.3);padding:2px 6px;border-radius:6px;font-size:15px;overflow-wrap:anywhere}
+.kids{display:flex;flex-wrap:wrap;gap:10px}
+.kid{border-radius:999px;padding:10px 22px;font-size:22px;font-weight:600}
+.kid[aria-pressed=true]{background:var(--gold);color:var(--ink)}
+.contacts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.contact{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:26px;text-align:center}
+.contact.star{grid-column:1/-1;flex-direction:row;justify-content:flex-start;gap:16px;padding:14px 18px;text-align:left;background:rgba(216,66,90,.28)}
+.contact .who{font-family:var(--display);font-size:28px;line-height:1}
+.contact.star .who{font-size:38px}
+.contact .tag{font-size:14px;opacity:.8}
+.face{width:92px;height:92px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--tint,#24566a);overflow:hidden}
+.contact.star .face{width:116px;height:116px}
+.face svg{width:100%;height:100%;display:block}
+.row{display:flex;gap:10px;align-items:center}
+.row.wrap{flex-wrap:wrap}
+.grow{flex:1;min-width:0}
+.call-top{text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px}
+.call-top .status{font-variant-numeric:tabular-nums;font-size:16px;opacity:.85;min-height:22px}
+.speaker{position:relative;width:140px;height:140px;margin:6px auto 0}
+.speaker .face{width:140px;height:140px;position:relative;z-index:1;box-shadow:0 0 0 5px rgba(255,255,255,.14)}
+.speaker::before,.speaker::after{content:"";position:absolute;inset:0;border-radius:50%;border:3px solid var(--gold);opacity:0}
+.ringing .speaker::before{animation:ring 1.4s ease-out infinite}
+.ringing .speaker::after{animation:ring 1.4s ease-out .7s infinite}
+@keyframes ring{0%{transform:scale(1);opacity:.8}100%{transform:scale(1.5);opacity:0}}
+.talking .mouth{animation:talk .28s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:center}
+@keyframes talk{from{transform:scaleY(.5)}to{transform:scaleY(2.2)}}
+.bubble{background:var(--ice);color:var(--ink);border-radius:24px;padding:14px 18px;font-size:22px;font-weight:500;position:relative;min-height:60px}
+.bubble::before{content:"";position:absolute;top:-10px;left:50%;margin-left:-10px;border:10px solid transparent;border-top:0;border-bottom-color:var(--ice)}
+.heard{align-self:flex-end;background:var(--frost);border-radius:18px;padding:8px 14px;font-size:16px;max-width:85%}
+.stage{display:flex;flex-direction:column;gap:12px}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.choices button{font-size:19px;min-height:62px}
+.choices .wide{grid-column:1/-1}
+.ideas{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.idea{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;font-size:15px;min-height:86px}
+.idea .pic{font-size:34px;line-height:1.1}
+.gift{display:flex;gap:14px;align-items:center;text-align:left;padding:12px;border-radius:24px;background:var(--ice);color:var(--ink);width:100%}
+.gift .pic{width:96px;height:96px;flex:none;border-radius:18px;background:#fff;display:grid;place-items:center;font-size:52px;overflow:hidden}
+.gift .pic img,.thumb img{width:100%;height:100%;object-fit:contain}
+.gift .name{font-size:21px;font-weight:600;line-height:1.15}
+.gift .desc{font-size:16px;opacity:.8}
+.gift.small .pic{width:64px;height:64px;font-size:36px}
+.loader{display:flex;gap:10px;align-items:center;justify-content:center;padding:10px}
+.loader i{width:12px;height:12px;border-radius:50%;background:var(--gold);animation:hop .6s ease-in-out infinite alternate}
+.loader i:nth-child(2){animation-delay:.2s}.loader i:nth-child(3){animation-delay:.4s}
+@keyframes hop{to{transform:translateY(-8px);opacity:.5}}
+.call-bar{display:flex;justify-content:center;gap:18px;align-items:center}
+.round{width:58px;height:58px;border-radius:50%;padding:0;font-size:24px}
+.hang{width:66px;height:66px;border-radius:50%;background:var(--berry);padding:0;display:grid;place-items:center}
+.hang svg{width:34px;height:34px}
+.micbig{width:92px;height:92px;border-radius:50%;padding:0;background:var(--pine);display:grid;place-items:center;transition:background .2s}
+.micbig svg{width:44px;height:44px}
+.micbig[data-s=listening]{background:var(--berry);animation:pulse 1s ease-in-out infinite alternate}
+.micbig[data-s=thinking],.micbig[data-s=options]{background:var(--frost)}
+.micbig[data-s=speaking]{background:var(--frost);box-shadow:0 0 0 3px var(--gold)}
+@keyframes pulse{to{box-shadow:0 0 0 12px rgba(216,66,90,.3)}}
+.panel{background:rgba(0,0,0,.22);border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.wish{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:18px;background:var(--frost)}
+.wish.bought{opacity:.6}
+.wish .name{font-weight:600;font-size:19px}
+.links{display:flex;flex-wrap:wrap;gap:8px}
+.links a,.cartlink{color:var(--ink);background:var(--gold);text-decoration:none;font-weight:600;font-size:15px;padding:8px 14px;border-radius:999px;display:inline-block}
+.links a.alt{background:var(--ice)}
+.thumb{width:54px;height:54px;border-radius:12px;background:#fff;flex:none;display:grid;place-items:center;font-size:30px;overflow:hidden}
+label.check{display:flex;gap:8px;align-items:center;font-size:16px}
+label.check input{width:22px;height:22px;accent-color:var(--pine)}
+ol.steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
+@media (max-width:360px){.ideas{grid-template-columns:1fr 1fr}h1{font-size:38px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}#snow{display:none}}
+</style>
+</head>
+<body>
+<canvas id="snow" aria-hidden="true"></canvas>
+<div id="app">
+
+  <section class="view on" id="boot">
+    <h1>North Pole Phone</h1>
+    <div class="scroll" id="bootBody"><div class="loader"><i></i><i></i><i></i></div></div>
+  </section>
+
+  <section class="view" id="home">
+    <header><h1>North Pole Phone</h1></header>
+    <div class="scroll">
+      <div>
+        <p style="font-size:22px;font-weight:500;margin-bottom:8px">Who is calling?</p>
+        <div class="kids" id="kids"></div>
+      </div>
+      <div>
+        <p style="font-size:22px;font-weight:500;margin-bottom:8px">Tap a friend to call</p>
+        <div class="contacts" id="contacts"></div>
+      </div>
+      <div class="row" style="justify-content:flex-end">
+        <button class="btn-quiet" id="toParent" type="button">Grown-ups</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="call">
+    <div class="call-top">
+      <h2 id="callName">Santa</h2>
+      <div class="status" id="callStatus">Calling…</div>
+      <div class="speaker"><div class="face" id="callFace"></div></div>
+    </div>
+    <div class="scroll" id="callScroll">
+      <div class="bubble" id="bubble" aria-live="polite" hidden></div>
+      <div class="heard" id="heard" hidden></div>
+      <div class="stage" id="stage"></div>
+    </div>
+    <div class="call-bar">
+      <button class="round" id="ideasBtn" type="button" aria-label="Gift ideas">🎁</button>
+      <button class="round" id="listBtn" type="button" aria-label="My list">📜</button>
+      <button class="micbig" id="mic" type="button" aria-label="Talk" data-s="idle">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M12 15a3.500 3.500 0 0 0 3.500-3.500v-6a3.500 3.500 0 0 0-7 0v6A3.500 3.500 0 0 0 12 15zm6-3.500a6 6 0 0 1-12 0H4.500a7.500 7.500 0 0 0 6.750 7.460V22h1.500v-3.040A7.500 7.500 0 0 0 19.500 11.500H18z"/></svg>
+      </button>
+      <button class="round" id="typeBtn" type="button" aria-label="Type instead">⌨️</button>
+      <button class="hang" id="hang" type="button" aria-label="Hang up">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M12 9c-3.300 0-6.300 1-8.700 2.800-.5.4-.6 1.100-.3 1.700l1.300 2.200c.3.5.9.7 1.500.5l2.600-1c.5-.2.8-.6.8-1.100v-1.600c1.800-.6 3.800-.6 5.600 0v1.600c0 .5.3.9.8 1.100l2.600 1c.6.2 1.200 0 1.500-.5l1.300-2.200c.3-.6.2-1.300-.3-1.700C18.300 10 15.300 9 12 9z"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <section class="view" id="parent">
+    <header class="row">
+      <h2 class="grow">Christmas lists</h2>
+      <button class="btn-quiet" id="parentBack" type="button">Back to phone</button>
+    </header>
+    <div class="scroll" id="parentBody"></div>
+  </section>
+</div>
+
+<script>
+(() => {
+"use strict";
+const API = "https://pacsfuusrxjhqiekatbo.supabase.co/functions/v1/np";
+
+/* ---------- helpers ---------- */
+const h = (t, a = {}, ...c) => {
+  const e = document.createElement(t);
+  for (const k in a) {
+    const v = a[k];
+    if (v == null || v === false) continue;
+    if (k === "class") e.className = v;
+    else if (k === "html") e.innerHTML = v;            // only for art written in this file
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v === true ? "" : v);
+  }
+  for (const x of c.flat()) { if (x == null || x === false) continue; e.append(x.nodeType ? x : document.createTextNode(String(x))); }
+  return e;
+};
+const $ = id => document.getElementById(id);
+const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} } };
+const dots = () => h("div", { class: "loader" }, h("i"), h("i"), h("i"));
+
+let code = store.get("npp-code") || "", lastError = "";
+async function api(action, body = {}) {
+  let r, d;
+  try {
+    r = await fetch(API, { method: "POST", headers: { "content-type": "application/json", "x-family-code": code }, body: JSON.stringify({ action, ...body }) });
+    d = await r.json();
+  } catch (e) { lastError = `${action}: could not reach the server (${e && e.message})`; const err = new Error("network"); err.kind = "network"; throw err; }
+  if (!r.ok || d.error) {
+    lastError = `${action}: ${d.error || r.status}${d.service ? " / " + d.service : ""}${d.detail ? " / " + d.detail : ""}`;
+    const err = new Error(d.error || "http"); err.kind = d.error; err.data = d; throw err;
+  }
+  return d;
+}
+
+/* ---------- the friends (original drawings) ---------- */
+const svg = inner => `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
+const ART = {
+  santa: svg(`<circle cx="60" cy="64" r="30" fill="#f3c9a5"/><path d="M28 50Q60 2 92 50Z" fill="#d8425a"/><path d="M70 18Q98 14 100 44" stroke="#d8425a" stroke-width="14" fill="none" stroke-linecap="round"/><circle cx="100" cy="48" r="8" fill="#fff"/><rect x="24" y="44" width="72" height="14" rx="7" fill="#fff"/><path d="M30 66Q28 112 60 114Q92 112 90 66Q76 84 60 84Q44 84 30 66Z" fill="#fff"/><circle cx="49" cy="65" r="3.200" fill="#10222c"/><circle cx="71" cy="65" r="3.200" fill="#10222c"/><circle cx="41" cy="73" r="5" fill="#ef9a9a" opacity=".7"/><circle cx="79" cy="73" r="5" fill="#ef9a9a" opacity=".7"/><circle cx="60" cy="73" r="5" fill="#e8a487"/><ellipse class="mouth" cx="60" cy="91" rx="6" ry="3" fill="#8a2c2c"/><path d="M60 79Q50 73 40 83Q52 89 60 83Q68 89 80 83Q70 73 60 79Z" fill="#fff" stroke="#dfe7e6"/>`),
+  mrs: svg(`<circle cx="60" cy="24" r="12" fill="#f1f1ee"/><path d="M34 96Q60 112 86 96L92 120L28 120Z" fill="#d8425a"/><path d="M34 97Q60 111 86 97" stroke="#fff" stroke-width="8" fill="none" stroke-linecap="round"/><circle cx="60" cy="66" r="28" fill="#f3c9a5"/><path d="M30 64Q28 30 60 30Q92 30 90 64Q84 46 60 46Q36 46 30 64Z" fill="#f1f1ee"/><circle cx="52" cy="31" r="3" fill="#d8425a"/><circle cx="58" cy="28" r="3" fill="#d8425a"/><ellipse cx="67" cy="31" rx="6" ry="3" fill="#35a37b"/><circle cx="49" cy="67" r="2.600" fill="#10222c"/><circle cx="71" cy="67" r="2.600" fill="#10222c"/><circle cx="49" cy="67" r="7.500" fill="none" stroke="#b8860b" stroke-width="1.800"/><circle cx="71" cy="67" r="7.500" fill="none" stroke="#b8860b" stroke-width="1.800"/><path d="M56.500 67H63.500" stroke="#b8860b" stroke-width="1.800"/><circle cx="42" cy="78" r="4.500" fill="#ef9a9a" opacity=".7"/><circle cx="78" cy="78" r="4.500" fill="#ef9a9a" opacity=".7"/><ellipse class="mouth" cx="60" cy="83" rx="6" ry="3" fill="#b23a48"/>`),
+  comet: svg(`<path d="M44 36Q36 20 30 10M40 26Q30 26 24 20M76 36Q84 20 90 10M80 26Q90 26 96 20" stroke="#8b5e34" stroke-width="5" fill="none" stroke-linecap="round"/><ellipse cx="30" cy="48" rx="10" ry="6" fill="#a8733f" transform="rotate(-25 30 48)"/><ellipse cx="90" cy="48" rx="10" ry="6" fill="#a8733f" transform="rotate(25 90 48)"/><ellipse cx="60" cy="62" rx="26" ry="30" fill="#b9834a"/><ellipse cx="60" cy="80" rx="17" ry="14" fill="#e7cda5"/><ellipse cx="60" cy="73" rx="7" ry="5" fill="#3a2a20"/><circle cx="48" cy="56" r="3.600" fill="#10222c"/><circle cx="72" cy="56" r="3.600" fill="#10222c"/><circle cx="49" cy="55" r="1.100" fill="#fff"/><circle cx="73" cy="55" r="1.100" fill="#fff"/><ellipse class="mouth" cx="60" cy="86" rx="5" ry="2.500" fill="#7a4a3a"/><path d="M40 100Q60 110 80 100" stroke="#35a37b" stroke-width="7" fill="none" stroke-linecap="round"/><circle cx="60" cy="110" r="6" fill="#f4c95d"/>`),
+  pepper: svg(`<path d="M36 70Q26 90 32 110" stroke="#b5532a" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M84 70Q94 90 88 110" stroke="#b5532a" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M34 62L14 52L36 76Z" fill="#f3c9a5"/><path d="M86 62L106 52L84 76Z" fill="#f3c9a5"/><circle cx="60" cy="68" r="26" fill="#f3c9a5"/><path d="M34 64Q36 42 60 42Q84 42 86 64Q72 52 60 54Q48 52 34 64Z" fill="#b5532a"/><path d="M34 48Q56 -4 96 14Q72 22 86 48Z" fill="#35a37b"/><circle cx="97" cy="14" r="5" fill="#f4c95d"/><path d="M33 48Q60 38 87 48" stroke="#d8425a" stroke-width="7" fill="none" stroke-linecap="round"/><circle cx="50" cy="69" r="3" fill="#10222c"/><circle cx="70" cy="69" r="3" fill="#10222c"/><circle cx="43" cy="77" r="4.500" fill="#ef9a9a" opacity=".7"/><circle cx="77" cy="77" r="4.500" fill="#ef9a9a" opacity=".7"/><circle cx="56" cy="75" r=".9" fill="#b5532a"/><circle cx="60" cy="76" r=".9" fill="#b5532a"/><circle cx="64" cy="75" r=".9" fill="#b5532a"/><ellipse class="mouth" cx="60" cy="83" rx="5.500" ry="2.800" fill="#b23a48"/>`),
+  flurry: svg(`<path d="M36 94Q60 108 84 94" stroke="#d8425a" stroke-width="10" fill="none" stroke-linecap="round"/><circle cx="60" cy="66" r="30" fill="#fff" stroke="#cfe3ea" stroke-width="2"/><path d="M32 52Q60 8 88 52Z" fill="#3aa6b9"/><rect x="28" y="46" width="64" height="12" rx="6" fill="#2b7f8f"/><circle cx="60" cy="20" r="8" fill="#fff"/><circle cx="48" cy="68" r="3.600" fill="#10222c"/><circle cx="72" cy="68" r="3.600" fill="#10222c"/><path d="M60 73L84 79L60 82Z" fill="#f08a3c"/><ellipse class="mouth" cx="57" cy="89" rx="6" ry="2.600" fill="#10222c"/>`)
+};
+const CH = {
+  santa: { name: "Santa", tag: "The big guy himself", tint: "#7c2f3f" },
+  mrs: { name: "Mrs. Claus", tag: "Cookies and news", tint: "#8a4a5a" },
+  comet: { name: "Comet", tag: "Sleigh team reindeer", tint: "#4a6a3f" },
+  pepper: { name: "Pepper", tag: "Toy workshop elf", tint: "#2c6b55" },
+  flurry: { name: "Flurry", tag: "Very silly snowman", tint: "#2b6f86" }
+};
+const ORDER = ["santa", "mrs", "comet", "pepper", "flurry"];
+const IDEAS = [["🪀", "Toys", "a fun toy"], ["👧", "Dolls", "a doll"], ["🧱", "Building", "a building set"], ["🎨", "Art", "an art and craft kit"],
+  ["🧸", "Stuffies", "a stuffed animal"], ["📚", "Books", "a book"], ["🧩", "Games", "a game or puzzle"], ["🛴", "Ride-ons", "a bike or scooter"],
+  ["👗", "Dress-up", "dress-up clothes"], ["🔬", "Science", "a science kit"], ["🎵", "Music", "a musical toy"], ["🎁", "Surprise", "a surprise that girls my age love"]];
+
+/* ---------- data ---------- */
+let state = { kids: [], wishes: [] }, curKid = store.get("npp-kid");
+const kidById = id => state.kids.find(k => k.id === id);
+const wishesOf = id => state.wishes.filter(w => w.kid_id === id);
+function fixKid() { if (!kidById(curKid)) curKid = state.kids[0] ? state.kids[0].id : null; }
+function take(d) { if (d && d.kids) state.kids = d.kids; if (d && d.wishes) state.wishes = d.wishes; }
+
+/* ---------- views ---------- */
+let view = "boot", unlocked = false;
+function show(v) { view = v; for (const s of document.querySelectorAll(".view")) s.classList.toggle("on", s.id === v); }
+
+async function boot() {
+  show("boot"); const body = $("bootBody"); body.replaceChildren(dots());
+  let st;
+  try { st = await api("status"); }
+  catch (e) { body.replaceChildren(h("div", { class: "panel" }, h("h3", {}, "Can't reach the North Pole"), h("p", {}, "Check the internet connection, then try again."), h("button", { class: "btn-main", type: "button", onclick: boot }, "Try again"))); return; }
+  if (st.missing && st.missing.length) {
+    body.replaceChildren(h("div", { class: "panel" }, h("h3", {}, "Almost ready"),
+      h("p", {}, "A grown-up still needs to add these secrets in Supabase (project north-pole-phone, Edge Functions, Secrets):"),
+      h("ol", { class: "steps" }, st.missing.map(m => h("li", {}, h("code", {}, m)))),
+      h("button", { class: "btn-main", type: "button", onclick: boot }, "Check again")));
+    return;
+  }
+  if (code) { try { take(await api("state")); goHome(); return; } catch (e) { if (e.kind !== "wrong_code") { body.replaceChildren(h("div", { class: "panel" }, h("p", {}, "Something went wrong loading the lists."), h("p", { class: "small muted" }, lastError), h("button", { class: "btn-main", type: "button", onclick: boot }, "Try again"))); return; } } }
+  const inp = h("input", { type: "password", id: "familyCode", placeholder: "Family passcode", autocomplete: "off", "aria-label": "Family passcode" });
+  const msg = h("p", { class: "muted" }, "A grown-up types this once on each device.");
+  body.replaceChildren(h("form", { class: "panel", onsubmit: async e => {
+    e.preventDefault(); code = inp.value.trim(); if (!code) return;
+    msg.textContent = "Checking…";
+    try { take(await api("state")); store.set("npp-code", code); goHome(); }
+    catch (err) { code = ""; msg.textContent = err.kind === "wrong_code" ? "That passcode is not right. Try again." : "Could not check the passcode. " + lastError; }
+  } }, h("h3", {}, "Family passcode"), inp, h("button", { class: "btn-main", type: "submit" }, "Open the phone"), msg));
+}
+function goHome() { show("home"); renderHome(); }
+function renderHome() {
+  fixKid();
+  const kids = $("kids"); kids.replaceChildren();
+  if (!state.kids.length) kids.append(h("p", { class: "muted" }, "No callers yet. A grown-up can add names under Grown-ups."));
+  for (const k of state.kids) kids.append(h("button", { class: "kid", type: "button", "aria-pressed": String(k.id === curKid), onclick: () => { curKid = k.id; store.set("npp-kid", k.id); renderHome(); } }, k.name));
+  const box = $("contacts"); box.replaceChildren();
+  for (const id of ORDER) {
+    const c = CH[id];
+    box.append(h("button", { class: "contact" + (id === "santa" ? " star" : ""), type: "button", "aria-label": "Call " + c.name, onclick: () => startCall(id) },
+      h("span", { class: "face", style: "--tint:" + c.tint, html: ART[id] }),
+      h("span", {}, h("span", { class: "who" }, c.name), h("br"), h("span", { class: "tag" }, c.tag))));
+  }
+}
+
+/* ---------- sound: everything plays through one <audio> element, which keeps working in silent mode on most phones ---------- */
+const player = new Audio(); player.setAttribute("playsinline", ""); player.preload = "auto";
+function wavUrl(seconds, fn) {
+  const rate = 22050, n = Math.floor(seconds * rate), buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, "RIFF"); v.setUint32(4, 36 + n * 2, true); w(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, fn(i / rate))) * 32767, true);
+  return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+}
+const SILENT = wavUrl(0.05, () => 0);
+const RING = wavUrl(2.600, t => { const p = t % 1.300; if (p > 0.9) return 0; const env = Math.min(1, p / 0.04, (0.9 - p) / 0.04); return env * 0.22 * (Math.sin(2 * Math.PI * 440 * t) + Math.sin(2 * Math.PI * 480 * t)) / 2; });
+let playDone = null;
+function stopAudio() { try { player.pause(); } catch (e) {} if (playDone) { const d = playDone; playDone = null; d(false); } }
+function playUrl(url, maxMs) {
+  stopAudio();
+  return new Promise(res => {
+    let fin = false; const timer = setTimeout(() => done(false), maxMs || 40000);
+    const done = ok => { if (fin) return; fin = true; clearTimeout(timer); if (playDone === done) playDone = null; res(ok); };
+    playDone = done; player.onended = () => done(true); player.onerror = () => done(false);
+    player.src = url; const p = player.play(); if (p && p.catch) p.catch(() => done(false));
+  });
+}
+async function playSpeech(b64) {
+  if (!b64) return false;
+  let url;
+  try { const bin = atob(b64), bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i); url = URL.createObjectURL(new Blob([bytes], { type: "audio/mpeg" })); } catch (e) { return false; }
+  $("call").classList.add("talking");
+  const ok = await playUrl(url);
+  $("call").classList.remove("talking"); URL.revokeObjectURL(url);
+  return ok;
+}
+
+/* ---------- microphone ---------- */
+let stream = null, actx = null, analyser = null, rec = null, vadTimer = 0, micOk = false;
+async function getMic() {
+  if (stream) return true;
+  if (!navigator.mediaDevices || !window.MediaRecorder) return false;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    if (actx) { const src = actx.createMediaStreamSource(stream); analyser = actx.createAnalyser(); analyser.fftSize = 1024; src.connect(analyser); }
+    return true;
+  } catch (e) { stream = null; return false; }
+}
+function dropMic() { if (stream) { for (const t of stream.getTracks()) t.stop(); stream = null; } analyser = null; }
+const recMime = () => ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || "";
+const toB64 = blob => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1] || ""); fr.onerror = rej; fr.readAsDataURL(blob); });
+
+/* ---------- the call ---------- */
+let call = null;
+const stage = $("stage");
+const alive = tok => call && call.tok === tok;
+function setMode(s, label) { if (!call) return; call.mode = s; $("mic").dataset.s = s; call.label = label || ""; paintStatus(); }
+function paintStatus() {
+  if (!call) return;
+  let t = call.label;
+  if (call.t0) { const s = Math.floor((Date.now() - call.t0) / 1000); t = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") + (t ? " · " + t : ""); }
+  $("callStatus").textContent = t;
+}
+function bubble(text) { const b = $("bubble"); b.hidden = false; b.textContent = text; $("callScroll").scrollTop = 0; }
+function heardNote(text) { const e = $("heard"); e.hidden = !text; e.textContent = text ? "You said: " + text : ""; }
+
+async function startCall(id) {
+  fixKid(); if (!curKid || call) return;
+  // these three lines must run inside the tap, or phones refuse to play sound later
+  player.src = SILENT; const pr = player.play(); if (pr && pr.catch) pr.catch(() => {});
+  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume && actx.resume(); } catch (e) {}
+  try { if (navigator.audioSession) navigator.audioSession.type = "play-and-record"; } catch (e) {}
+
+  const ch = CH[id], tok = String(Date.now()) + Math.random();
+  call = { id, ch, kid: kidById(curKid), tok, t0: 0, tick: 0, history: [], mode: "ringing", label: "Calling…" };
+  $("callName").textContent = ch.name; $("callStatus").textContent = "Calling…";
+  const f = $("callFace"); f.style.setProperty("--tint", ch.tint); f.innerHTML = ART[id];
+  $("bubble").hidden = true; heardNote(""); stage.replaceChildren(); $("mic").dataset.s = "thinking";
+  $("call").classList.add("ringing"); show("call");
+
+  let first = null, failed = null;
+  const startP = api("talk", { event: "start", character: id, kidId: call.kid.id, history: [] }).then(r => { first = r; }, e => { failed = e; });
+  const micP = getMic().then(ok => { micOk = ok; });
+  for (let i = 0; i < 4 && alive(tok) && (i === 0 || (!first && !failed)); i++) await playUrl(RING, 3500);
+  await Promise.all([startP, micP]);
+  if (!alive(tok)) return;
+  $("call").classList.remove("ringing");
+  call.t0 = Date.now(); call.tick = setInterval(paintStatus, 1000);
+  if (failed) return lineTrouble(failed);
+  await handle(first, tok);
+}
+function hangUp() {
+  if (!call) return;
+  const c = call; call = null;
+  clearInterval(c.tick); clearInterval(vadTimer); stopAudio();
+  try { if (rec && rec.state !== "inactive") { rec.onstop = null; rec.stop(); } } catch (e) {}
+  dropMic(); $("call").classList.remove("ringing", "talking");
+  api("state").then(d => { take(d); if (view === "home") renderHome(); }, () => {});
+  goHome();
+}
+function lineTrouble(e) {
+  if (e && e.kind === "wrong_code") { hangUp(); code = ""; store.set("npp-code", null); boot(); return; }
+  bubble("Oh no, the North Pole phone line is crackly! Tap the microphone to try again.");
+  stage.replaceChildren(); setMode("idle", micOk ? "Tap the microphone to talk" : "Tap the keyboard or the gift");
+}
+async function handle(resp, tok) {
+  if (!alive(tok)) return;
+  take(resp);
+  if (resp.heard) call.history.push({ role: "user", content: resp.heard });
+  call.history.push({ role: "assistant", content: resp.say });
+  heardNote(resp.heard && resp.heard[0] !== "(" ? resp.heard : "");
+  bubble(resp.say); setMode("speaking", "");
+  await playSpeech(resp.audio);
+  if (!alive(tok)) return;
+  const a = resp.action;
+  if (a && a.type === "options") return showOptions(a.wish, [], tok);
+  if (a && a.type === "bye") return hangUp();
+  listen();
+}
+async function send(payload) {
+  if (!call) return;
+  const tok = call.tok; call.panelOpen = false; stopAudio(); stage.replaceChildren(dots()); setMode("thinking", "Thinking…");
+  try { const resp = await api("talk", { character: call.id, kidId: call.kid.id, history: call.history, ...payload }); if (alive(tok)) { stage.replaceChildren(); await handle(resp, tok); } }
+  catch (e) { if (alive(tok)) lineTrouble(e); }
+}
+function listen() {
+  if (!call || call.panelOpen) return;
+  if (!stream || !micOk) { setMode("idle", "Tap the keyboard or the gift"); return; }
+  const tok = call.tok, mime = recMime(), chunks = [];
+  try { rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream); } catch (e) { micOk = false; setMode("idle", "Tap the keyboard or the gift"); return; }
+  rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  const t0 = Date.now(); let started = false, speechMs = 0, lastSpeech = 0, floor = 0, frames = 0;
+  const buf = analyser ? new Uint8Array(analyser.fftSize) : null;
+  const finish = sendIt => {
+    clearInterval(vadTimer); if (!rec || rec.state === "inactive") return;
+    const r = rec;
+    r.onstop = () => {
+      if (!alive(tok)) return;
+      const blob = new Blob(chunks, { type: r.mimeType || mime || "audio/webm" });
+      if (sendIt && blob.size > 1500) toB64(blob).then(b => send({ audio: b, mime: blob.type }), () => setMode("idle", "Tap the microphone to talk"));
+      else setMode("idle", "Tap the microphone to talk");
+    };
+    try { r.stop(); } catch (e) { setMode("idle", "Tap the microphone to talk"); }
+  };
+  call.finish = finish;
+  rec.start(); setMode("listening", "Listening…");
+  vadTimer = setInterval(() => {
+    if (!alive(tok)) { clearInterval(vadTimer); return; }
+    const now = Date.now(), el = now - t0;
+    if (buf && analyser) {
+      analyser.getByteTimeDomainData(buf); let sum = 0;
+      for (let i = 0; i < buf.length; i++) { const x = (buf[i] - 128) / 128; sum += x * x; }
+      const rms = Math.sqrt(sum / buf.length);
+      if (frames < 6) { floor += rms / 6; frames++; }
+      else if (rms > Math.min(0.08, Math.max(0.025, floor * 2.200))) { started = true; speechMs += 60; lastSpeech = now; }
+    }
+    if (started && speechMs >= 240 && now - lastSpeech > 1300) finish(true);
+    else if (!started && el > 9000) finish(false);
+    else if (el > 16000) finish(started);
+  }, 60);
+}
+function stopListening(sendIt) { if (call && call.mode === "listening" && call.finish) call.finish(sendIt); }
+
+function picNode(o, cls) {
+  const span = h("span", { class: cls || "pic" }, o.emoji || "🎁");
+  if (o.asin) {
+    const img = new Image(); img.alt = ""; img.referrerPolicy = "no-referrer";
+    img.onload = () => { if (img.naturalWidth > 40) span.replaceChildren(img); };
+    img.src = "https://images-na.ssl-images-amazon.com/images/P/" + o.asin + ".01._SCLZZZZZZZ_.jpg";
+  }
+  return span;
+}
+function giftCard(o, onTap, small) {
+  return h(onTap ? "button" : "div", { class: "gift" + (small ? " small" : ""), type: onTap ? "button" : null, onclick: onTap },
+    picNode(o), h("span", {}, h("span", { class: "name" }, o.name), h("br"), h("span", { class: "desc" }, o.desc || o.description || "")));
+}
+async function showOptions(wish, exclude, tok) {
+  if (!alive(tok)) return;
+  setMode("options", "Looking in the workshop…"); stage.replaceChildren(dots());
+  let resp;
+  try { resp = await api("options", { character: call.id, kidId: call.kid.id, wish, exclude }); } catch (e) { if (alive(tok)) lineTrouble(e); return; }
+  if (!alive(tok)) return;
+  call.history.push({ role: "assistant", content: resp.say });
+  bubble(resp.say); setMode("options", "Tap the one you like");
+  stage.replaceChildren(...resp.options.map(o => giftCard(o, () => choose(o, tok))), h("div", { class: "choices" },
+    h("button", { type: "button", onclick: () => { stopAudio(); showOptions(wish, exclude.concat(resp.options.map(o => o.name)), tok); } }, "Show different ones"),
+    h("button", { type: "button", onclick: () => send({ text: "I want something different instead." }) }, "Something else")));
+  playSpeech(resp.audio);
+}
+async function choose(o, tok) {
+  if (!alive(tok) || call.mode !== "options") return;
+  stopAudio(); setMode("thinking", "Writing it down…"); stage.replaceChildren(giftCard(o, null), dots());
+  let resp;
+  try { resp = await api("pick", { character: call.id, kidId: call.kid.id, option: o }); } catch (e) { if (alive(tok)) lineTrouble(e); return; }
+  if (!alive(tok)) return;
+  take(resp);
+  call.history.push({ role: "user", content: `(She tapped "${o.name}". It is now on her list.)` }, { role: "assistant", content: resp.say });
+  stage.replaceChildren(giftCard(o, null)); bubble(resp.say); setMode("speaking", "");
+  await playSpeech(resp.audio);
+  if (!alive(tok)) return;
+  stage.replaceChildren(); listen();
+}
+function openPanel(kind) {
+  if (!call || call.mode === "thinking" || call.mode === "ringing") return;
+  call.panelOpen = true; stopListening(false); stopAudio();
+  const tok = call.tok;
+  setTimeout(() => {
+    if (!alive(tok) || !call.panelOpen) return;
+    stopListening(false); setMode("idle", "");
+    const close = h("button", { class: "btn-quiet", type: "button", onclick: () => { call.panelOpen = false; stage.replaceChildren(); listen(); } }, "Go back");
+    if (kind === "ideas") stage.replaceChildren(h("div", { class: "ideas" }, IDEAS.map(([e, t, say]) => h("button", { class: "idea", type: "button", onclick: () => send({ text: "I would like " + say + "." }) }, h("span", { class: "pic" }, e), t))), close);
+    else if (kind === "type") {
+      const inp = h("input", { type: "text", id: "typed", placeholder: "Type what you want to say", maxlength: "200", autocomplete: "off", "aria-label": "Message" });
+      stage.replaceChildren(h("form", { class: "row", onsubmit: e => { e.preventDefault(); const t = inp.value.trim(); if (t) send({ text: t }); } }, h("div", { class: "grow" }, inp), h("button", { class: "btn-main", type: "submit" }, "Send")), close);
+      inp.focus();
+    } else {
+      const mine = wishesOf(call.kid.id);
+      stage.replaceChildren(
+        ...(mine.length ? mine.map(w => h("div", { class: "row" }, h("div", { class: "grow" }, giftCard(w, null, true)),
+          h("button", { class: "btn-berry", type: "button", "aria-label": "Take " + w.name + " off my list", onclick: async ev => {
+            ev.currentTarget.disabled = true;
+            try { take(await api("wish_remove", { wishId: w.id })); call && call.history.push({ role: "user", content: `(She took "${w.name}" off her list using the screen.)` }); } catch (e) {}
+            if (alive(tok)) openPanel("list");
+          } }, "Take off"))) : [h("p", {}, "Your list is empty so far.")]), close);
+    }
+  }, 80);
+}
+
+/* ---------- grown-ups ---------- */
+const enc = encodeURIComponent;
+const stores = w => [
+  ["Amazon", w.asin ? "https://www.amazon.com/dp/" + w.asin : "https://www.amazon.com/s?k=" + enc(w.query || w.name)],
+  ["Target", "https://www.target.com/s?searchTerm=" + enc(w.query || w.name)],
+  ["Walmart", "https://www.walmart.com/search?q=" + enc(w.query || w.name)]
+];
+function asinFrom(v) {
+  const m = /(?:\/dp\/|\/gp\/product\/|\/gp\/aw\/d\/|ASIN[=/])([A-Z0-9]{10})/i.exec(v) || /^\s*([A-Z0-9]{10})\s*$/i.exec(v);
+  return m ? m[1].toUpperCase() : "";
+}
+function renderGate() {
+  const a = 6 + Math.floor(Math.random() * 4), b = 6 + Math.floor(Math.random() * 4);
+  const inp = h("input", { type: "number", id: "gateAnswer", inputmode: "numeric", "aria-label": "Answer" });
+  const msg = h("p", { class: "muted" }, "This keeps the surprise safe from little eyes.");
+  $("parentBody").replaceChildren(h("form", { class: "panel", onsubmit: e => { e.preventDefault(); if (Number(inp.value) === a * b) { unlocked = true; loadParent(); } else { msg.textContent = "Not quite. Try again."; inp.value = ""; } } },
+    h("h3", {}, "Grown-ups only"), h("p", {}, `What is ${a} × ${b}?`), inp, h("button", { class: "btn-main", type: "submit" }, "Open the lists"), msg));
+}
+async function loadParent() { $("parentBody").replaceChildren(dots()); try { take(await api("state")); } catch (e) {} renderParent(); }
+async function act(action, body) { try { take(await api(action, body)); } catch (e) {} renderParent(); }
+function renderParent() {
+  const body = $("parentBody"); body.replaceChildren();
+  for (const k of state.kids) {
+    const mine = wishesOf(k.id), cart = mine.filter(w => w.asin && !w.bought);
+    const panel = h("div", { class: "panel" }, h("div", { class: "row" }, h("h3", { class: "grow" }, k.name + "'s list"), h("span", { class: "muted" }, mine.length + (mine.length === 1 ? " wish" : " wishes"))));
+    if (!mine.length) panel.append(h("p", { class: "muted" }, "Nothing yet. Wishes appear here after a call."));
+    for (const w of mine) {
+      const linkIn = h("input", { type: "url", id: "amz-" + w.id, placeholder: "Paste the exact Amazon product link", "aria-label": "Amazon product link for " + w.name });
+      panel.append(h("div", { class: "wish" + (w.bought ? " bought" : "") },
+        h("div", { class: "row" }, picNode(w, "thumb"),
+          h("div", { class: "grow" }, h("div", { class: "name" }, w.name), h("div", { class: "small muted" }, [w.description, w.price && "about " + w.price].filter(Boolean).join(" · ")))),
+        h("div", { class: "links" }, stores(w).map(([n, u], i) => h("a", { href: u, target: "_blank", rel: "noopener", class: i ? "alt" : "" }, (!i && w.asin ? "Open on " : "Search ") + n))),
+        h("div", { class: "small muted" }, "Asked " + new Date(w.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) + (w.from_character ? " on a call with " + w.from_character : "") + (w.asin ? " · Amazon item " + w.asin : " · no exact Amazon item yet")),
+        !w.asin && h("form", { class: "row", onsubmit: e => { e.preventDefault(); const a = asinFrom(linkIn.value); if (a) act("wish_update", { wishId: w.id, asin: a }); else { linkIn.value = ""; linkIn.placeholder = "No product ID in that link. Use the product page link."; } } },
+          h("div", { class: "grow" }, linkIn), h("button", { class: "btn-quiet", type: "submit" }, "Pin")),
+        h("div", { class: "row wrap" },
+          h("label", { class: "check grow" }, h("input", { type: "checkbox", id: "got-" + w.id, checked: w.bought, onchange: e => act("wish_update", { wishId: w.id, bought: e.target.checked }) }), "Bought"),
+          w.asin && h("button", { class: "btn-quiet", type: "button", onclick: () => act("wish_update", { wishId: w.id, asin: "" }) }, "Unpin"),
+          h("button", { class: "btn-quiet", type: "button", onclick: () => act("wish_remove", { wishId: w.id }) }, "Remove"))));
+    }
+    if (cart.length) panel.append(h("a", { class: "cartlink", target: "_blank", rel: "noopener",
+      href: "https://www.amazon.com/gp/aws/cart/add.html?" + cart.map((w, i) => `ASIN.${i + 1}=${w.asin}&Quantity.${i + 1}=1`).join("&") },
+      `Add ${k.name}'s ${cart.length} ${cart.length === 1 ? "item" : "items"} to my Amazon cart`));
+    if (mine.length) {
+      const copy = h("button", { class: "btn-quiet", type: "button", onclick: () => {
+        const text = k.name + "'s Christmas list\n" + mine.map(w => `- ${w.name}${w.bought ? " (bought)" : ""}: ${stores(w)[0][1]}`).join("\n");
+        navigator.clipboard.writeText(text).then(() => { copy.textContent = "Copied"; }, () => { copy.textContent = "Copy did not work here"; });
+      } }, "Copy " + k.name + "'s list");
+      panel.append(copy);
+    }
+    body.append(panel);
+  }
+  const names = h("div", { class: "panel" }, h("h3", {}, "Callers"));
+  for (const k of state.kids) names.append(h("div", { class: "row" },
+    h("div", { class: "grow" }, h("input", { type: "text", id: "kid-" + k.id, value: k.name, maxlength: "20", "aria-label": "Name", onchange: e => { const n = e.target.value.trim(); if (n) act("kid_rename", { kidId: k.id, name: n }); } })),
+    h("button", { class: "btn-quiet", type: "button", onclick: () => act("kid_remove", { kidId: k.id }) }, "Remove")));
+  const add = h("input", { type: "text", id: "kid-new", placeholder: "Add a name", maxlength: "20", "aria-label": "New name" });
+  names.append(h("form", { class: "row", onsubmit: e => { e.preventDefault(); const n = add.value.trim(); if (n) act("kid_add", { name: n }); } }, h("div", { class: "grow" }, add), h("button", { class: "btn-main", type: "submit" }, "Add")));
+  body.append(names);
+
+  const voiceBox = h("div", { class: "panel" }, h("h3", {}, "Voices"),
+    h("p", { class: "muted" }, "Each friend uses a voice from your ElevenLabs account. Add voices you like to My Voices there, then pick them here."));
+  const loadBtn = h("button", { class: "btn-quiet", type: "button", onclick: async () => {
+    loadBtn.disabled = true; loadBtn.textContent = "Loading…";
+    try {
+      const d = await api("voices"); loadBtn.remove();
+      for (const id of ORDER) {
+        const sel = h("select", { id: "voice-" + id, "aria-label": "Voice for " + CH[id].name, onchange: async e => { try { await api("voice_set", { character: id, voiceId: e.target.value }); } catch (err) {} } },
+          d.voices.map(v => h("option", { value: v.id, selected: d.map[id] === v.id }, v.name + ([v.gender, v.age].filter(Boolean).length ? " (" + [v.gender, v.age].filter(Boolean).join(", ") + ")" : ""))));
+        const prev = h("button", { class: "btn-quiet", type: "button", onclick: async () => {
+          prev.disabled = true;
+          try { const r = await api("say", { character: id, text: id === "santa" ? "Ho ho ho! Merry Christmas! What would you like this year?" : "Hello from the North Pole! I'm " + CH[id].name + "." }); await playSpeech(r.audio); } catch (err) {}
+          prev.disabled = false;
+        } }, "Hear it");
+        voiceBox.append(h("div", {}, h("p", { class: "small", style: "margin-bottom:4px" }, CH[id].name), h("div", { class: "row" }, h("div", { class: "grow" }, sel), prev)));
+      }
+    } catch (e) { loadBtn.disabled = false; loadBtn.textContent = "Load voices"; voiceBox.append(h("p", { class: "small muted" }, lastError)); }
+  } }, "Load voices");
+  voiceBox.append(loadBtn); body.append(voiceBox);
+
+  const diag = h("div", { class: "panel" }, h("h3", {}, "Setup check"));
+  const out = h("div", { class: "small" }, lastError ? "Last problem: " + lastError : "No problems seen on this device.");
+  diag.append(out, h("div", { class: "row wrap" },
+    h("button", { class: "btn-quiet", type: "button", onclick: async ev => {
+      const b = ev.currentTarget; b.disabled = true; out.textContent = "Checking…";
+      try { const d = await api("test"); out.replaceChildren(...Object.entries(d.test).map(([k, v]) => h("p", {}, k + ": " + v)), h("p", { class: "muted" }, "Model: " + d.model)); } catch (e) { out.textContent = lastError; }
+      b.disabled = false;
+    } }, "Run the check"),
+    h("button", { class: "btn-quiet", type: "button", onclick: () => { code = ""; store.set("npp-code", null); unlocked = false; boot(); } }, "Forget passcode on this device")));
+  body.append(diag, h("p", { class: "small muted" }, "Gift ideas come from Claude searching Amazon. A wish gets an exact Amazon item only when the search returned its product page; otherwise the Amazon button opens a search. Prices are estimates."));
+}
+
+/* ---------- wiring ---------- */
+$("hang").addEventListener("click", hangUp);
+$("mic").addEventListener("click", () => {
+  if (!call) return;
+  if (call.mode === "listening") stopListening(true);
+  else if (call.mode === "speaking") stopAudio();
+  else if (call.mode === "idle") { if (stream && micOk) { call.panelOpen = false; stage.replaceChildren(); listen(); } else openPanel("type"); }
+});
+$("ideasBtn").addEventListener("click", () => openPanel("ideas"));
+$("listBtn").addEventListener("click", () => openPanel("list"));
+$("typeBtn").addEventListener("click", () => openPanel("type"));
+$("toParent").addEventListener("click", () => { show("parent"); unlocked ? loadParent() : renderGate(); });
+$("parentBack").addEventListener("click", () => { unlocked = false; goHome(); });
+boot();
+
+/* ---------- snow ---------- */
+(() => {
+  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const cv = $("snow"), cx = cv.getContext("2d"); let W = 0, H = 0;
+  const size = () => { W = cv.width = innerWidth; H = cv.height = innerHeight; }; size(); addEventListener("resize", size);
+  const fl = Array.from({ length: 45 }, () => ({ x: Math.random(), y: Math.random(), r: 1 + Math.random() * 2.200, v: 0.0006 + Math.random() * 0.0012, d: Math.random() * 6.280 }));
+  const step = () => {
+    cx.clearRect(0, 0, W, H); cx.fillStyle = "rgba(255,255,255,.8)";
+    for (const f of fl) { f.y += f.v; f.d += 0.01; if (f.y > 1.02) { f.y = -0.02; f.x = Math.random(); } cx.beginPath(); cx.arc((f.x + Math.sin(f.d) * 0.01) * W, f.y * H, f.r, 0, 6.290); cx.fill(); }
+    requestAnimationFrame(step);
+  };
+  step();
+})();
+})();
+</script>
+</body>
+</html>
