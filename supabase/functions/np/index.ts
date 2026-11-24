@@ -165,6 +165,7 @@ Rules:
 - Only when she clearly says she WANTS something for Christmas, or asks to add something to her list, say one short excited line and call show_gift_options with what she wants. The app then shows her pictures to choose from, so do not describe products yourself. Just talking about a toy or an animal is not a wish; if you are unsure, ask whether she would like it on her list.
 - Never promise that she will get a gift. Say you will put it on the list, or that you will see what the elves can do.
 - If she asks what is on her list, read it to her. If she wants something taken off, call remove_from_list with its number and tell her it is crossed off.
+- You have a music box that plays these tunes: Jingle Bells, Deck the Halls, Silent Night, We Wish You a Merry Christmas, Joy to the World, and Jolly Old Saint Nicholas. When she asks for music, a song or a carol, say one short happy line and call play_music with the closest tune, or "surprise" if she does not name one. If she asks for a song you do not have, kindly say your music box does not know that one and offer one it does. You cannot sing, and you do not recite the words of modern songs.
 - When she says goodbye or wants to stop, say a short goodbye and call end_call.
 - Never ask for or repeat personal details such as an address, school name, last name or password, and never suggest keeping secrets from her parents. If she brings up something worrying, unsafe or grown-up, or asks about health or anything that needs an adult, gently say that is a good thing to ask Mom or Dad, then move to something cheerful.
 - If she asks for something unsafe or something that is not a gift (a real animal, a weapon), cheerfully steer to a toy version.
@@ -181,6 +182,8 @@ ${list}`;
         input_schema: { type: "object", properties: { wish: { type: "string", description: "What she wants, in a few plain words, e.g. 'unicorn stuffed animal'" } }, required: ["wish"] } },
       { name: "remove_from_list", description: "Take one item off her Christmas list.",
         input_schema: { type: "object", properties: { item_number: { type: "integer", description: "The number of the item in her list" } }, required: ["item_number"] } },
+      { name: "play_music", description: "Play a music-box Christmas tune for the child after you say a short line.",
+        input_schema: { type: "object", properties: { song: { type: "string", enum: ["jingle_bells", "deck_the_halls", "silent_night", "we_wish_you", "joy_to_the_world", "jolly_old_saint_nicholas", "surprise"] } }, required: ["song"] } },
       { name: "end_call", description: "End the phone call after saying goodbye.", input_schema: { type: "object", properties: {} } },
     ],
   });
@@ -199,6 +202,9 @@ ${list}`;
       action = { type: "removed", wishId: w.id };
       if (!say) say = `All right, I crossed ${w.name} off your list.`;
     } else if (!say) say = "Hmm, I could not find that one on your list. Which one should I take off?";
+  } else if (tool?.name === "play_music") {
+    action = { type: "music", song: str(tool.input?.song, 40) };
+    if (!say) say = "Here comes a tune from my music box!";
   } else if (tool?.name === "end_call") {
     action = { type: "bye" };
     if (!say) say = `Goodbye, ${kid.name}! Merry Christmas!`;

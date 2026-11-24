@@ -105,6 +105,11 @@ code{background:rgba(0,0,0,.3);padding:2px 6px;border-radius:6px;font-size:15px;
 .micbig svg{width:44px;height:44px}
 .micbig[data-s=listening]{background:var(--berry);animation:pulse 1s ease-in-out infinite alternate}
 .micbig[data-s=thinking],.micbig[data-s=options]{background:var(--frost)}
+.micbig[data-s=music]{background:var(--gold)}
+.song{display:flex;gap:14px;align-items:center;padding:16px;border-radius:24px;background:var(--ice);color:var(--ink);font-size:22px;font-weight:600}
+.song .note{font-size:44px;animation:hop .6s ease-in-out infinite alternate}
+.songs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.songs button{font-size:16px;min-height:54px;padding:8px 10px}
 .micbig[data-s=speaking]{background:var(--frost);box-shadow:0 0 0 3px var(--gold)}
 @keyframes pulse{to{box-shadow:0 0 0 12px rgba(216,66,90,.3)}}
 .panel{background:rgba(0,0,0,.22);border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:12px}
@@ -299,6 +304,40 @@ function wavUrl(seconds, fn) {
 }
 const SILENT = wavUrl(0.05, () => 0);
 const RING = wavUrl(2.600, t => { const p = t % 1.300; if (p > 0.9) return 0; const env = Math.min(1, p / 0.04, (0.9 - p) / 0.04); return env * 0.22 * (Math.sin(2 * Math.PI * 440 * t) + Math.sin(2 * Math.PI * 480 * t)) / 2; });
+/* ---------- music box: public-domain carols, generated in the browser ---------- */
+const SONGS = {
+  jingle_bells: { title: "Jingle Bells", bpm: 196, notes: "E4 1 E4 1 E4 2 E4 1 E4 1 E4 2 E4 1 G4 1 C4 1.5 D4 .5 E4 4 F4 1 F4 1 F4 1.5 F4 .5 F4 1 E4 1 E4 1 E4 .5 E4 .5 E4 1 D4 1 D4 1 E4 1 D4 2 G4 2 E4 1 E4 1 E4 2 E4 1 E4 1 E4 2 E4 1 G4 1 C4 1.5 D4 .5 E4 4 F4 1 F4 1 F4 1.5 F4 .5 F4 1 E4 1 E4 1 E4 .5 E4 .5 G4 1 G4 1 F4 1 D4 1 C4 4" },
+  deck_the_halls: { title: "Deck the Halls", bpm: 168, notes: "G4 1.5 F4 .5 E4 1 D4 1 C4 1 D4 1 E4 1 C4 1 D4 .5 E4 .5 F4 .5 D4 .5 E4 1.5 D4 .5 C4 1 B3 1 C4 2 G4 1.5 F4 .5 E4 1 D4 1 C4 1 D4 1 E4 1 C4 1 D4 .5 E4 .5 F4 .5 D4 .5 E4 1.5 D4 .5 C4 1 B3 1 C4 2 D4 1.5 E4 .5 F4 1 D4 1 E4 1.5 F4 .5 G4 1 D4 1 E4 .5 F#4 .5 G4 1 A4 .5 B4 .5 C5 1 B4 1 A4 1 G4 2 G4 1.5 F4 .5 E4 1 D4 1 C4 1 D4 1 E4 1 C4 1 A4 .5 A4 .5 A4 .5 A4 .5 G4 1.5 F4 .5 E4 1 D4 1 C4 2" },
+  silent_night: { title: "Silent Night", bpm: 104, notes: "G4 1.5 A4 .5 G4 1 E4 3 G4 1.5 A4 .5 G4 1 E4 3 D5 2 D5 1 B4 3 C5 2 C5 1 G4 3 A4 2 A4 1 C5 1.5 B4 .5 A4 1 G4 1.5 A4 .5 G4 1 E4 3 A4 2 A4 1 C5 1.5 B4 .5 A4 1 G4 1.5 A4 .5 G4 1 E4 3 D5 2 D5 1 F5 1.5 D5 .5 B4 1 C5 3 E5 3 C5 1 G4 1 E4 1 G4 1.5 F4 .5 D4 1 C4 6" },
+  we_wish_you: { title: "We Wish You a Merry Christmas", bpm: 160, notes: "G4 1 C5 1 C5 .5 D5 .5 C5 .5 B4 .5 A4 1 A4 1 A4 1 D5 1 D5 .5 E5 .5 D5 .5 C5 .5 B4 1 G4 1 G4 1 E5 1 E5 .5 F5 .5 E5 .5 D5 .5 C5 1 A4 1 G4 .5 G4 .5 A4 1 D5 1 B4 1 C5 2 G4 1 C5 1 C5 .5 D5 .5 C5 .5 B4 .5 A4 1 A4 1 A4 1 D5 1 D5 .5 E5 .5 D5 .5 C5 .5 B4 1 G4 1 G4 1 E5 1 E5 .5 F5 .5 E5 .5 D5 .5 C5 1 A4 1 G4 .5 G4 .5 A4 1 D5 1 B4 1 C5 3" },
+  joy_to_the_world: { title: "Joy to the World", bpm: 108, notes: "C5 1 B4 .75 A4 .25 G4 1.5 F4 .5 E4 1 D4 1 C4 1.5 G4 .5 A4 1.5 A4 .5 B4 1.5 B4 .5 C5 1.5 C5 .5 C5 .5 B4 .5 A4 .5 G4 .5 G4 .75 F4 .25 E4 .5 C5 .5 C5 .5 B4 .5 A4 .5 G4 .5 G4 .75 F4 .25 E4 .5 E4 .5 E4 .5 E4 .5 E4 .5 E4 .25 F4 .25 G4 1.5 F4 .25 E4 .25 D4 .5 D4 .5 D4 .5 D4 .25 E4 .25 F4 1.5 E4 .25 D4 .25 C4 .5 C5 1 A4 .5 G4 .75 F4 .25 E4 .5 F4 .5 E4 1 D4 1 C4 2" },
+  jolly_old_saint_nicholas: { title: "Jolly Old Saint Nicholas", bpm: 152, notes: "B4 1 B4 1 B4 1 B4 1 A4 1 A4 1 A4 2 G4 1 G4 1 G4 1 G4 1 B4 4 E4 1 E4 1 E4 1 E4 1 D4 1 D4 1 G4 2 A4 1 G4 1 A4 1 B4 1 G4 4 B4 1 B4 1 B4 1 B4 1 A4 1 A4 1 A4 2 G4 1 G4 1 G4 1 G4 1 B4 4 E4 1 E4 1 E4 1 E4 1 D4 1 D4 1 G4 2 A4 1 G4 1 A4 1 B4 1 G4 4" }
+};
+const songUrls = {};
+function songUrl(key) {
+  if (songUrls[key]) return songUrls[key];
+  const song = SONGS[key], rate = 22050, beat = 60 / song.bpm, tok = song.notes.split(" "), SEMI = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  const notes = []; let t = 0.15;
+  for (let i = 0; i < tok.length; i += 2) {
+    const m = /^([A-G])(#?)(\d)$/.exec(tok[i]), d = parseFloat(tok[i + 1]) * beat;
+    if (m) notes.push({ t, f: 440 * Math.pow(2, (SEMI[m[1]] + (m[2] ? 1 : 0) + (Number(m[3]) + 1) * 12 + 12 - 69) / 12) });   // one octave up: music-box register
+    t += d;
+  }
+  const n = Math.floor((t + 2.200) * rate), buf = new Float32Array(n), parts = [[1, 1, 3.200], [2, 0.32, 5], [3, 0.12, 7], [4.100, 0.05, 9]];
+  for (const note of notes) {
+    const start = Math.floor(note.t * rate), len = Math.min(n - start, Math.floor(1.800 * rate));
+    for (const [mult, amp, decay] of parts) {
+      const w = 2 * Math.PI * note.f * mult / rate;
+      for (let i = 0; i < len; i++) buf[start + i] += amp * Math.exp(-decay * i / rate) * Math.sin(w * i) * Math.min(1, i / 40);
+    }
+  }
+  let peak = 0; for (let i = 0; i < n; i++) if (Math.abs(buf[i]) > peak) peak = Math.abs(buf[i]);
+  const out = new ArrayBuffer(44 + n * 2), v = new DataView(out), wr = (o, str) => { for (let i = 0; i < str.length; i++) v.setUint8(o + i, str.charCodeAt(i)); };
+  wr(0, "RIFF"); v.setUint32(4, 36 + n * 2, true); wr(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); wr(36, "data"); v.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, (buf[i] / (peak || 1)) * 0.8 * 32767, true);
+  return (songUrls[key] = URL.createObjectURL(new Blob([out], { type: "audio/wav" })));
+}
 let playDone = null;
 function stopAudio() { try { player.pause(); } catch (e) {} if (playDone) { const d = playDone; playDone = null; d(false); } }
 function playUrl(url, maxMs) {
@@ -416,7 +455,21 @@ async function handle(resp, tok) {
   const a = resp.action;
   if (a && a.type === "options") return showOptions(a.wish, [], tok);
   if (a && a.type === "bye") return hangUp();
+  if (a && a.type === "music") return playMusic(a.song, tok);
   listen();
+}
+async function playMusic(key, tok) {
+  if (!alive(tok)) return;
+  if (!SONGS[key]) { const keys = Object.keys(SONGS); key = keys[Math.floor(Math.random() * keys.length)]; }
+  const song = SONGS[key];
+  call.panelOpen = false; setMode("music", "Music box");
+  stage.replaceChildren(h("div", { class: "song" }, h("span", { class: "note" }, "🎵"), h("span", {}, song.title)),
+    h("button", { class: "btn-berry", type: "button", onclick: stopAudio }, "Stop the music"));
+  let url; try { url = songUrl(key); } catch (e) { url = null; }
+  if (url) await playUrl(url, 150000);
+  if (!alive(tok)) return;
+  call.history.push({ role: "user", content: `(The music box played "${song.title}".)` });
+  stage.replaceChildren(); listen();
 }
 async function send(payload) {
   if (!call) return;
@@ -516,7 +569,9 @@ function openPanel(kind) {
     if (!alive(tok) || !call.panelOpen) return;
     stopListening(false); setMode("idle", "");
     const close = h("button", { class: "btn-quiet", type: "button", onclick: () => { call.panelOpen = false; stage.replaceChildren(); listen(); } }, "Go back");
-    if (kind === "ideas") stage.replaceChildren(h("div", { class: "ideas" }, IDEAS.map(([e, t, say]) => h("button", { class: "idea", type: "button", onclick: () => send({ text: "I would like " + say + "." }) }, h("span", { class: "pic" }, e), t))), close);
+    if (kind === "ideas") stage.replaceChildren(h("p", { class: "muted" }, "Play a song"),
+      h("div", { class: "songs" }, Object.keys(SONGS).map(k => h("button", { type: "button", onclick: () => playMusic(k, tok) }, "🎵 " + SONGS[k].title))),
+      h("p", { class: "muted" }, "Or ask for a gift"), h("div", { class: "ideas" }, IDEAS.map(([e, t, say]) => h("button", { class: "idea", type: "button", onclick: () => send({ text: "I would like " + say + "." }) }, h("span", { class: "pic" }, e), t))), close);
     else if (kind === "type") {
       const inp = h("input", { type: "text", id: "typed", placeholder: "Type what you want to say", maxlength: "200", autocomplete: "off", "aria-label": "Message" });
       stage.replaceChildren(h("form", { class: "row", onsubmit: e => { e.preventDefault(); const t = inp.value.trim(); if (t) send({ text: t }); } }, h("div", { class: "grow" }, inp), h("button", { class: "btn-main", type: "submit" }, "Send")), close);
@@ -643,7 +698,7 @@ $("hang").addEventListener("click", hangUp);
 $("mic").addEventListener("click", () => {
   if (!call) return;
   if (call.mode === "listening") stopListening(true);
-  else if (call.mode === "speaking") stopAudio();
+  else if (call.mode === "speaking" || call.mode === "music") stopAudio();
   else if (call.mode === "idle") { if (stream && micOk) { call.panelOpen = false; stage.replaceChildren(); listen(); } else openPanel("type"); }
 });
 $("ideasBtn").addEventListener("click", () => openPanel("ideas"));
