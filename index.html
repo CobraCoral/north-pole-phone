@@ -64,6 +64,10 @@ code{background:rgba(0,0,0,.3);padding:2px 6px;border-radius:6px;font-size:15px;
 .contact.star .face{width:116px;height:116px}
 .face svg{width:100%;height:100%;display:block}
 .face.emoji{font-size:54px;line-height:1}
+.face.photo{background:#fff}
+.face.photo img{width:90%;height:90%;object-fit:contain;display:block}
+.talking .face.photo img{animation:bob .35s ease-in-out infinite alternate}
+@keyframes bob{from{transform:translateY(0) rotate(-2deg)}to{transform:translateY(-3px) rotate(2deg)}}
 .speaker .face.emoji{font-size:84px}
 .bubble .who{font-size:15px;font-weight:600;color:#b23a48;margin-bottom:2px}
 .log{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow-y:auto;background:rgba(0,0,0,.2);border-radius:14px;padding:10px}
@@ -246,9 +250,18 @@ const CH = {
   comet: { name: "Comet", tag: "Sleigh team reindeer", tint: "#4a6a3f" },
   pepper: { name: "Pepper", tag: "Toy workshop elf", tint: "#2c6b55" },
   flurry: { name: "Flurry", tag: "Very silly snowman", tint: "#2b6f86" },
-  rudolph: { name: "Rudolph", tag: "Lights the way", tint: "#6b2433", emoji: "🦌" },
+  rudolph: { name: "Rudolph", tag: "Lights the way", tint: "#6b2433", emoji: "🦌", img: "rudolph.png" },
   herd: { name: "The Reindeer", tag: "All on speakerphone", tint: "#3d5a47" }
 };
+// a friend's picture: a drawing from this file, a picture file supplied by the family, or an emoji
+function setFace(el, id) {
+  const c = CH[id]; el.style.setProperty("--tint", c.tint);
+  el.classList.toggle("photo", !ART[id] && !!c.img); el.classList.toggle("emoji", !ART[id] && !c.img);
+  if (ART[id]) el.innerHTML = ART[id];
+  else if (c.img) { const img = h("img", { src: c.img, alt: "" }); img.addEventListener("error", () => { el.classList.remove("photo"); el.classList.add("emoji"); el.textContent = c.emoji; }); el.replaceChildren(img); }
+  else el.textContent = c.emoji;
+  return el;
+}
 const ORDER = ["santa", "mrs", "rudolph", "herd", "comet", "pepper", "flurry"];
 const SOLO = ORDER.filter(id => id !== "herd");
 const IDEAS = [["🪀", "Toys", "a fun toy"], ["👧", "Dolls", "a doll"], ["🧱", "Building", "a building set"], ["🎨", "Art", "an art and craft kit"],
@@ -298,7 +311,7 @@ function renderHome() {
   for (const id of ORDER) {
     const c = CH[id];
     box.append(h("button", { class: "contact" + (id === "santa" ? " star" : ""), type: "button", "aria-label": "Call " + c.name, onclick: () => startCall(id) },
-      ART[id] ? h("span", { class: "face", style: "--tint:" + c.tint, html: ART[id] }) : h("span", { class: "face emoji", style: "--tint:" + c.tint }, c.emoji),
+      setFace(h("span", { class: "face" }), id),
       h("span", {}, h("span", { class: "who" }, c.name), h("br"), h("span", { class: "tag" }, c.tag))));
   }
 }
@@ -453,7 +466,7 @@ async function startCall(id) {
   const ch = CH[id], tok = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   call = { id, ch, kid: kidById(curKid), tok, t0: 0, tick: 0, history: [], mode: "ringing", label: "Calling…" };
   $("callName").textContent = ch.name; $("callStatus").textContent = "Calling…";
-  const f = $("callFace"); f.style.setProperty("--tint", ch.tint); f.classList.toggle("emoji", !ART[id]); if (ART[id]) f.innerHTML = ART[id]; else f.textContent = ch.emoji;
+  const f = $("callFace"); setFace(f, id);
   $("bubble").hidden = true; heardNote(""); stage.replaceChildren(); $("mic").dataset.s = "thinking";
   $("call").classList.add("ringing"); show("call");
 
