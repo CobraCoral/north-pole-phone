@@ -63,6 +63,10 @@ code{background:rgba(0,0,0,.3);padding:2px 6px;border-radius:6px;font-size:15px;
 .face{width:92px;height:92px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--tint,#24566a);overflow:hidden}
 .contact.star .face{width:116px;height:116px}
 .face svg{width:100%;height:100%;display:block}
+.countdown{display:flex;align-items:baseline;gap:10px;margin-top:6px;font-size:20px;font-weight:500}
+.countdown .num{font-family:var(--display);font-size:46px;line-height:1;color:var(--ice);background:var(--berry);border-radius:16px;padding:4px 14px;font-variant-numeric:tabular-nums}
+textarea{font:inherit;color:inherit;background:rgba(0,0,0,.25);border:1.5px solid var(--frost);border-radius:16px;padding:12px 14px;width:100%;min-height:96px;resize:vertical}
+textarea::placeholder{color:rgba(233,244,243,.55)}
 .face.emoji{font-size:54px;line-height:1}
 .face.photo{background:#fff}
 .face.photo img{width:90%;height:90%;object-fit:contain;display:block}
@@ -148,7 +152,7 @@ ol.steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
   </section>
 
   <section class="view" id="home">
-    <header><h1>North Pole Phone</h1></header>
+    <header><h1>North Pole Phone</h1><div class="countdown" id="countdown"></div></header>
     <div class="scroll">
       <div>
         <p style="font-size:22px;font-weight:500;margin-bottom:8px">Who is calling?</p>
@@ -273,7 +277,19 @@ let state = { kids: [], wishes: [] }, curKid = store.get("npp-kid");
 const kidById = id => state.kids.find(k => k.id === id);
 const wishesOf = id => state.wishes.filter(w => w.kid_id === id);
 function fixKid() { if (!kidById(curKid)) curKid = state.kids[0] ? state.kids[0].id : null; }
-function take(d) { if (d && d.kids) state.kids = d.kids; if (d && d.wishes) state.wishes = d.wishes; }
+function take(d) { if (d && d.kids) state.kids = d.kids; if (d && d.wishes) state.wishes = d.wishes; if (d && typeof d.family === "string") state.family = d.family; }
+// sleeps until Christmas, counted on this device's own calendar
+function sleeps() {
+  const now = new Date(), today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let xmas = new Date(now.getFullYear(), 11, 25); if (today > xmas) xmas = new Date(now.getFullYear() + 1, 11, 25);
+  return Math.round((xmas - today) / 86400000);
+}
+const dateInfo = () => ({ today: new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }), sleeps: sleeps() });
+function paintCountdown() {
+  const n = sleeps(), el = $("countdown");
+  if (n === 0) el.replaceChildren("Merry Christmas! 🎄");
+  else el.replaceChildren(h("span", { class: "num" }, n), n === 1 ? "sleep until Christmas. Santa flies tonight!" : "sleeps until Christmas");
+}
 
 /* ---------- views ---------- */
 let view = "boot", unlocked = false;
@@ -303,7 +319,7 @@ async function boot() {
 }
 function goHome() { show("home"); renderHome(); }
 function renderHome() {
-  fixKid();
+  fixKid(); paintCountdown();
   const kids = $("kids"); kids.replaceChildren();
   if (!state.kids.length) kids.append(h("p", { class: "muted" }, "No callers yet. A grown-up can add names under Grown-ups."));
   for (const k of state.kids) kids.append(h("button", { class: "kid", type: "button", "aria-pressed": String(k.id === curKid), onclick: () => { curKid = k.id; store.set("npp-kid", k.id); renderHome(); } }, k.name));
@@ -471,7 +487,7 @@ async function startCall(id) {
   $("call").classList.add("ringing"); show("call");
 
   let first = null, failed = null;
-  const startP = api("talk", { event: "start", character: id, kidId: call.kid.id, callId: tok, history: [], songs: songList() }).then(r => { first = r; }, e => { failed = e; });
+  const startP = api("talk", { event: "start", character: id, kidId: call.kid.id, callId: tok, history: [], songs: songList(), ...dateInfo() }).then(r => { first = r; }, e => { failed = e; });
   const micP = getMic().then(ok => { micOk = ok; dropMic(); });   // ask permission now, but keep the mic closed while sound plays
   for (let i = 0; i < 4 && alive(tok) && (i === 0 || (!first && !failed)); i++) await playUrl(RING, 3500);
   await Promise.all([startP, micP]);
@@ -538,7 +554,7 @@ async function playMusic(key, tok) {
 async function send(payload) {
   if (!call) return;
   const tok = call.tok; call.panelOpen = false; stopAudio(); stage.replaceChildren(dots()); setMode("thinking", "Thinking…");
-  try { const resp = await api("talk", { character: call.id, kidId: call.kid.id, callId: tok, history: call.history, songs: songList(), ...payload }); if (alive(tok)) { stage.replaceChildren(); await handle(resp, tok); } }
+  try { const resp = await api("talk", { character: call.id, kidId: call.kid.id, callId: tok, history: call.history, songs: songList(), ...dateInfo(), ...payload }); if (alive(tok)) { stage.replaceChildren(); await handle(resp, tok); } }
   catch (e) { if (alive(tok)) lineTrouble(e); }
 }
 async function listen() {
@@ -703,6 +719,14 @@ function renderParent() {
     if (cart.length) panel.append(h("a", { class: "cartlink", target: "_blank", rel: "noopener",
       href: "https://www.amazon.com/gp/aws/cart/add.html?" + cart.map((w, i) => `ASIN.${i + 1}=${w.asin}&Quantity.${i + 1}=1`).join("&") },
       `Add ${k.name}'s ${cart.length} ${cart.length === 1 ? "item" : "items"} to my Amazon cart`));
+    const factsIn = h("textarea", { id: "facts-" + k.id, maxlength: "800", "aria-label": "Things Santa and friends know about " + k.name,
+      placeholder: "Favorite color is purple. Has a cat named Luna. Lost a tooth last week. Helped set the table on Sunday." }); factsIn.value = k.facts || "";
+    const factsBtn = h("button", { class: "btn-quiet", type: "button", onclick: async () => {
+      factsBtn.disabled = true;
+      try { take(await api("kid_facts", { kidId: k.id, facts: factsIn.value.trim() })); factsBtn.textContent = "Saved"; } catch (e) { factsBtn.textContent = "Could not save. Try again"; }
+      factsBtn.disabled = false;
+    } }, "Save what they know");
+    panel.append(h("p", { class: "small", style: "margin-top:6px" }, "Things Santa and friends know about " + k.name), factsIn, factsBtn);
     const logBox = h("div", {});
     const logBtn = h("button", { class: "btn-quiet", type: "button", onclick: async () => {
       logBtn.disabled = true; logBtn.textContent = "Loading…";
@@ -734,6 +758,14 @@ function renderParent() {
     }
     body.append(panel);
   }
+  const famIn = h("textarea", { id: "familyNotes", maxlength: "800", "aria-label": "Things they know about the family", placeholder: "We live where it never snows. Grandma visits on Christmas Eve. The dog is called Max." }); famIn.value = state.family || "";
+  const famBtn = h("button", { class: "btn-quiet", type: "button", onclick: async () => {
+    famBtn.disabled = true;
+    try { take(await api("family_set", { notes: famIn.value.trim() })); famBtn.textContent = "Saved"; } catch (e) { famBtn.textContent = "Could not save. Try again"; }
+    famBtn.disabled = false;
+  } }, "Save family notes");
+  body.append(h("div", { class: "panel" }, h("h3", {}, "About the family"),
+    h("p", { class: "muted" }, "Shared by every caller. The friends mention a note only when it fits, and never say who told them. Good deeds get praised. Keep out anything you would not want read aloud."), famIn, famBtn));
   const pauseSel = h("select", { id: "pauseSel", "aria-label": "Listening patience", onchange: e => store.set("npp-pause", e.target.value) },
     [[1500, "1.5 seconds (quick talkers)"], [2200, "About 2 seconds"], [3000, "3 seconds"], [4000, "4 seconds"], [5500, "5.5 seconds (lots of thinking time)"]]
       .map(([v, t]) => h("option", { value: v, selected: pauseMs() === v }, t)));

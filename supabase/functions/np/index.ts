@@ -179,13 +179,14 @@ const textOf = (resp: any) => (resp.content ?? []).filter((b: any) => b.type ===
 
 // ---------- data ----------
 async function loadState() {
-  const [k, w] = await Promise.all([
-    db.from("kids").select("id,name").order("created_at"),
+  const [k, w, f] = await Promise.all([
+    db.from("kids").select("id,name,facts").order("created_at"),
     db.from("wishes").select("id,kid_id,name,description,query,price,emoji,asin,url,from_character,bought,created_at").order("created_at"),
+    db.from("settings").select("value").eq("key", "family_notes").maybeSingle(),
   ]);
   if (k.error) throw new Upstream("database", k.error.message);
   if (w.error) throw new Upstream("database", w.error.message);
-  return { kids: k.data ?? [], wishes: w.data ?? [] };
+  return { kids: k.data ?? [], wishes: w.data ?? [], family: str((f.data?.value as any)?.text, 800) };
 }
 const asinOf = (u: string) => {
   const m = /amazon\.com\/(?:[^\s"]*?\/)?(?:dp|gp\/product|gp\/aw\/d)\/([A-Z0-9]{10})/i.exec(u || "");
@@ -211,6 +212,11 @@ async function talk(p: any) {
   while (history.length && history[0].role !== "user") history.shift();
 
   const songs = songsFrom(p.songs);
+  // the date comes from the family's own device, so "sleeps until Christmas" matches their calendar
+  const today = str(p.today, 40).replace(/[^\w ,]/g, "");
+  const sleeps = Number.isInteger(p.sleeps) && p.sleeps >= 0 && p.sleeps <= 366 ? p.sleeps as number : null;
+  const dateLine = (today ? `Today is ${today}. ` : "") + (sleeps === null ? "" : sleeps === 0 ? "Today is Christmas Day." : sleeps === 1 ? "Christmas is tomorrow, so Santa flies tonight." : `There are ${sleeps} sleeps until Christmas.`);
+  const facts = str((kid as any).facts, 800).trim();
   const list = mine.length ? mine.map((w, i) => `${i + 1}. ${w.name}`).join("\n") : "(empty)";
   const herdRule = p.character === "herd" ? `
 - Format for this call: every reply is 2 or 3 short lines. Each line is one reindeer speaking, written exactly as "Name: words", using only the eight names above. Use a different reindeer on each line and share the turns around the team. They playfully talk over each other and finish each other's sentences. Keep the whole reply under 45 words.` : "";
@@ -230,7 +236,13 @@ ${herdRule ? herdRule.trim() + "\n" : ""}- Often end with a friendly question or
 - When she says goodbye or wants to stop, say a short goodbye and call end_call.
 - Never ask for or repeat personal details such as an address, school name, last name or password, and never suggest keeping secrets from her parents. If she brings up something worrying, unsafe or grown-up, or asks about health or anything that needs an adult, gently say that is a good thing to ask Mom or Dad, then move to something cheerful.
 - If she asks for something unsafe or something that is not a gift (a real animal, a weapon), cheerfully steer to a toy version.
+- The notes below are things your character simply knows about her. Mention at most one in a reply, only where it fits naturally, and never list them or say how you know. If a note says she did something kind, brave or helpful, praise it warmly once during the call.
 - When the first message says the call just connected, greet her by name. If her list is not empty you may mention one thing on it. Then ask what she would like to talk about, or what she would like for Christmas.
+
+${dateLine}
+
+What you know about ${kid.name}:
+${facts || "(nothing noted yet)"}${state.family ? `\nAbout her family: ${state.family}` : ""}
 
 Her Christmas list right now:
 ${list}`;
@@ -396,6 +408,8 @@ Deno.serve(async (req) => {
       }
       case "kid_add": { const n = str(p.name, 20).trim(); if (n) await db.from("kids").insert({ name: n }); return json(await loadState()); }
       case "kid_rename": { const n = str(p.name, 20).trim(); if (n) await db.from("kids").update({ name: n }).eq("id", str(p.kidId, 40)); return json(await loadState()); }
+      case "kid_facts": await db.from("kids").update({ facts: str(p.facts, 800) }).eq("id", str(p.kidId, 40)); return json(await loadState());
+      case "family_set": await db.from("settings").upsert({ key: "family_notes", value: { text: str(p.notes, 800) }, updated_at: new Date().toISOString() }); return json(await loadState());
       case "kid_remove": await db.from("kids").delete().eq("id", str(p.kidId, 40)); return json(await loadState());
       case "voices": return json({ voices: await elVoices(), map: await voiceMap(), characters: Object.fromEntries(SOLO().map((k) => [k, CH[k].name])) });
       case "chat_log": {
