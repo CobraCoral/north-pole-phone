@@ -39,11 +39,27 @@ const CH: Record<string, Ch> = {
     persona: "Pepper, a girl elf who works in Santa's toy workshop: bubbly, quick and very excited about toys. You pin wishes to Santa's list.",
     pick: "Ta-da! Which one do you like best?", saved: (i) => `Yay! I pinned ${i} to Santa's list for you. Want to add more?`,
     unheard: "Oops, a toy train went choo choo right by my ear! Can you say that again?" },
+  rudolph: { name: "Rudolph", speed: 1.0, gender: "male", ages: ["young"], words: ["gentle", "warm", "friendly", "soft", "kind", "youth"],
+    persona: "Rudolph, the reindeer whose glowing red nose lights the way for Santa's sleigh on foggy nights: humble, brave and kind, a little shy. You like to remind children that the thing that makes them different can be the thing that makes them shine.",
+    pick: "Wow, look at these! Which one do you like best?", saved: (i) => `Great pick! I'll light the way so ${i} gets on Santa's list. Anything else?`,
+    unheard: "Oh! It's foggy on the phone line. Can you say that again?" },
+  herd: { name: "The Reindeer", speed: 1.05, gender: "male", ages: ["young"], words: [],
+    persona: "writing the words for Santa's reindeer team, who are all crowded around one speakerphone in the stable: Dasher (fast and sporty), Dancer (graceful, loves music), Prancer (proud and funny), Vixen (clever and a little cheeky), Comet (goofy, loves carrots), Cupid (sweet, loves hugs), Donner (big booming voice, always hungry) and Blitzen (bursting with energy).",
+    pick: "Vixen: Ooh, look at these!\nDonner: Which one do you like best?", saved: (i) => `Cupid: Aww, great pick!\nDasher: I'll race ${i} over to Santa's list! Anything else?`,
+    unheard: "Prancer: Everybody hush, I can't hear!\nDancer: Can you say that again?" },
   flurry: { name: "Flurry", speed: 1.0, gender: "male", ages: ["middle", "young"], words: ["goofy", "character", "cartoon", "silly", "funny", "quirky", "animated"],
     persona: "Flurry, a very silly snowman who loves snow puns and jokes. You send wishes to Santa by snowflake.",
     pick: "Snow way! Look at these! Which one do you like best?", saved: (i) => `Cool! One snowflake message to Santa: ${i}. Anything else?`,
     unheard: "Brrr, my ears froze for a second! Can you say that again?" },
 };
+
+// The speakerphone team: each reindeer gets its own voice.
+const HERD = [
+  { name: "Dasher", gender: "male", speed: 1.12 }, { name: "Dancer", gender: "female", speed: 1.0 }, { name: "Prancer", gender: "male", speed: 0.98 },
+  { name: "Vixen", gender: "female", speed: 1.08 }, { name: "Comet", gender: "male", speed: 1.05 }, { name: "Cupid", gender: "female", speed: 1.02 },
+  { name: "Donner", gender: "male", speed: 0.9 }, { name: "Blitzen", gender: "male", speed: 1.15 },
+];
+const SOLO = () => Object.keys(CH).filter((k) => k !== "herd");
 
 const str = (v: unknown, n: number) => (typeof v === "string" ? v : "").slice(0, n);
 // The app sends the tunes its music box can play; this is the fallback list.
@@ -72,11 +88,11 @@ async function elVoices() {
 async function voiceMap(): Promise<Record<string, string>> {
   const { data } = await db.from("settings").select("value").eq("key", "voices").maybeSingle();
   const map: Record<string, string> = (data?.value as Record<string, string>) ?? {};
-  if (Object.keys(CH).every((k) => map[k])) return map;
+  if (SOLO().every((k) => map[k])) return map;
   const voices = await elVoices();
   if (!voices.length) throw new Upstream("elevenlabs", "this account has no voices");
   const used = new Set(Object.values(map));
-  for (const k of Object.keys(CH)) {
+  for (const k of SOLO()) {
     if (map[k]) continue;
     const c = CH[k];
     let best = voices[0], bestScore = -99;
@@ -94,15 +110,47 @@ async function voiceMap(): Promise<Record<string, string>> {
   await db.from("settings").upsert({ key: "voices", value: map, updated_at: new Date().toISOString() });
   return map;
 }
-async function tts(character: string, text: string): Promise<string> {
-  const map = await voiceMap();
-  const r = await fetch(`${EL}/v1/text-to-speech/${map[character]}?output_format=mp3_44100_64`, {
+async function herdVoices(): Promise<Record<string, string>> {
+  const { data } = await db.from("settings").select("value").eq("key", "herd_voices").maybeSingle();
+  const map: Record<string, string> = (data?.value as Record<string, string>) ?? {};
+  if (HERD.every((h) => map[h.name])) return map;
+  const main = await voiceMap();
+  const voices = await elVoices();
+  if (!voices.length) throw new Upstream("elevenlabs", "this account has no voices");
+  const taken = new Set([...Object.values(main), ...Object.values(map)]);
+  for (const h of HERD) {
+    if (map[h.name]) continue;
+    if (h.name === "Comet") { map.Comet = main.comet; continue; }
+    const v = voices.find((x: any) => !taken.has(x.id) && x.gender === h.gender) ?? voices.find((x: any) => !taken.has(x.id))
+      ?? voices.find((x: any) => x.gender === h.gender) ?? voices[0];
+    map[h.name] = v.id; taken.add(v.id);
+  }
+  await db.from("settings").upsert({ key: "herd_voices", value: map, updated_at: new Date().toISOString() });
+  return map;
+}
+async function ttsRaw(voiceId: string, text: string, speed: number): Promise<string> {
+  const r = await fetch(`${EL}/v1/text-to-speech/${voiceId}?output_format=mp3_44100_64`, {
     method: "POST",
     headers: { "xi-api-key": env("ELEVENLABS_API_KEY"), "Content-Type": "application/json" },
-    body: JSON.stringify({ text, model_id: "eleven_flash_v2_5", voice_settings: { stability: 0.45, similarity_boost: 0.8, speed: CH[character].speed } }),
+    body: JSON.stringify({ text, model_id: "eleven_flash_v2_5", voice_settings: { stability: 0.45, similarity_boost: 0.8, speed } }),
   });
   if (!r.ok) throw new Upstream("elevenlabs", `speech ${r.status} ${(await r.text()).slice(0, 200)}`);
   return encodeBase64(new Uint8Array(await r.arrayBuffer()));
+}
+type Part = { speaker: string; text: string; audio: string };
+// One voice for a single character; for the reindeer team, one clip per "Name: words" line.
+async function speak(character: string, text: string): Promise<{ audio: string | null; parts: Part[] | null }> {
+  if (character !== "herd") return { audio: await ttsRaw((await voiceMap())[character], text, CH[character].speed), parts: null };
+  const hv = await herdVoices();
+  let lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean).map((l) => {
+    const m = /^([A-Za-z]+)\s*:\s*(.+)$/.exec(l);
+    const r = m ? HERD.find((h) => h.name.toLowerCase() === m[1].toLowerCase()) : undefined;
+    return r && m ? { r, text: m[2] } : null;
+  }).filter((x): x is { r: typeof HERD[number]; text: string } => !!x).slice(0, 4);
+  if (!lines.length) lines = [{ r: HERD[0], text: text.replace(/\n+/g, " ") }];
+  const parts: Part[] = [];
+  for (const l of lines) parts.push({ speaker: l.r.name, text: l.text, audio: await ttsRaw(hv[l.r.name], l.text, l.r.speed) });
+  return { audio: null, parts };
 }
 async function stt(audioB64: string, mime: string): Promise<string> {
   const bytes = decodeBase64(audioB64);
@@ -155,7 +203,7 @@ async function talk(p: any) {
   if (p.event === "start") heard = "(The phone call just connected.)";
   else if (typeof p.text === "string" && p.text.trim()) heard = str(p.text.trim(), 300);
   else if (typeof p.audio === "string" && p.audio.length > 200) heard = await stt(p.audio, str(p.mime, 60));
-  if (!heard) return json({ heard: "", say: c.unheard, audio: await tts(p.character, c.unheard), action: null, wishes: state.wishes });
+  if (!heard) return json({ heard: "", say: c.unheard, ...(await speak(p.character, c.unheard)), action: null, wishes: state.wishes });
 
   const history = (Array.isArray(p.history) ? p.history : [])
     .filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim())
@@ -164,13 +212,15 @@ async function talk(p: any) {
 
   const songs = songsFrom(p.songs);
   const list = mine.length ? mine.map((w, i) => `${i + 1}. ${w.name}`).join("\n") : "(empty)";
+  const herdRule = p.character === "herd" ? `
+- Format for this call: every reply is 2 or 3 short lines. Each line is one reindeer speaking, written exactly as "Name: words", using only the eight names above. Use a different reindeer on each line and share the turns around the team. They playfully talk over each other and finish each other's sentences. Keep the whole reply under 45 words.` : "";
   const system = `You are ${c.persona}
 You are on a pretend phone call inside a family's Christmas app with ${kid.name}, a young girl between 4 and 8 years old. Everything you write is spoken aloud by a voice, so write only the words you say: no stage directions, no emoji, no asterisks, no lists.
 
 Rules:
 - You are a friendly companion she can chat with about anything a young child is curious about: animals, space, how things work, school, her day, stories, jokes, riddles, guessing games, and life at the North Pole. Answer her questions truthfully in simple words a 5 year old understands. If you do not know or are not sure, say so. Christmas wishes are only one of the things you talk about, so do not steer every turn back to presents.
 - Replies are spoken, so keep them short: usually one to three sentences. A story, joke or explanation she asked for can run to about six short sentences.
-- Often end with a friendly question or an invitation to keep chatting, but not every single time.
+${herdRule ? herdRule.trim() + "\n" : ""}- Often end with a friendly question or an invitation to keep chatting, but not every single time.
 - Always stay in character and keep the Christmas magic alive: answer questions about Santa, the reindeer and the North Pole the way your character would. Be warm, playful and kind. Never scary, never sad.
 - Her words reach you through speech recognition and may be garbled. Guess kindly; if you really cannot tell, ask her to say it again.
 - Only when she clearly says she WANTS something for Christmas, or asks to add something to her list, say one short excited line and call show_gift_options with what she wants. The app then shows her pictures to choose from, so do not describe products yourself. Just talking about a toy or an animal is not a wish; if you are unsure, ask whether she would like it on her list.
@@ -227,7 +277,11 @@ ${list}`;
     if (!say) say = `Goodbye, ${kid.name}! Merry Christmas!`;
   }
   if (!say) say = c.unheard;
-  return json({ heard, say, audio: await tts(p.character, say), action, wishes });
+  const rows = [];
+  if (p.event !== "start") rows.push({ kid_id: kid.id, call_id: str(p.callId, 60), character: c.name, role: "child", content: heard });
+  rows.push({ kid_id: kid.id, call_id: str(p.callId, 60), character: c.name, role: "character", content: say });
+  await db.from("chat_log").insert(rows);   // the family's own record; a failed insert never blocks the call
+  return json({ heard, say, ...(await speak(p.character, say)), action, wishes });
 }
 
 async function options(p: any) {
@@ -265,7 +319,7 @@ Reply with ONLY a JSON array of 3 objects and no other text. Each object:
   try { list = await run(true); } catch (e) { searched = false; note = e instanceof Error ? e.message.slice(0, 200) : "search failed"; }
   if (!list.length) { searched = false; try { list = await run(false); } catch (e) { if (e instanceof Upstream) throw e; } }
   if (!list.length) list = [{ name: wish, desc: "Just what you asked for", price: "", query: wish, emoji: "🎁", asin: "", url: `https://www.amazon.com/s?k=${encodeURIComponent(wish)}` }];
-  return json({ options: list, say: c.pick, audio: await tts(p.character, c.pick), searched, note });
+  return json({ options: list, say: c.pick, ...(await speak(p.character, c.pick)), searched, note });
 }
 
 async function pick(p: any) {
@@ -280,7 +334,11 @@ async function pick(p: any) {
   });
   if (error) throw new Upstream("database", error.message);
   const say = c.saved(name);
-  return json({ say, audio: await tts(p.character, say), wishes: (await loadState()).wishes });
+  await db.from("chat_log").insert([
+    { kid_id: p.kidId, call_id: str(p.callId, 60), character: c.name, role: "event", content: `Chose a gift: ${name}` },
+    { kid_id: p.kidId, call_id: str(p.callId, 60), character: c.name, role: "character", content: say },
+  ]);
+  return json({ say, ...(await speak(p.character, say)), wishes: (await loadState()).wishes });
 }
 
 function testWav(): Uint8Array {
@@ -296,7 +354,7 @@ async function selfTest() {
   try { await loadState(); out.database = "ok"; } catch (e) { out.database = String(e).slice(0, 200); }
   try { await claude({ max_tokens: 5, messages: [{ role: "user", content: "Say hi" }] }); out.anthropic = "ok"; } catch (e) { out.anthropic = String(e).slice(0, 300); }
   try { const v = await elVoices(); out.elevenlabs = v.length ? "ok" : "no voices in this account"; } catch (e) { out.elevenlabs = String(e).slice(0, 300); }
-  try { const a = await tts("santa", "Ho ho ho."); out["speaking (text to speech)"] = a.length > 500 ? "ok" : "empty audio"; } catch (e) { out["speaking (text to speech)"] = String(e).slice(0, 300); }
+  try { const a = (await speak("santa", "Ho ho ho.")).audio ?? ""; out["speaking (text to speech)"] = a.length > 500 ? "ok" : "empty audio"; } catch (e) { out["speaking (text to speech)"] = String(e).slice(0, 300); }
   try { await stt(encodeBase64(testWav()), "audio/wav"); out["listening (speech to text)"] = "ok"; } catch (e) { out["listening (speech to text)"] = String(e).slice(0, 300); }
   return json({ test: out, model: MODEL() });
 }
@@ -323,7 +381,7 @@ Deno.serve(async (req) => {
       case "say": {
         if (!CH[p.character]) return json({ error: "bad_character" }, 400);
         const text = str(p.text, 300); if (!text) return json({ error: "no_text" }, 400);
-        return json({ say: text, audio: await tts(p.character, text) });
+        return json({ say: text, ...(await speak(p.character, text)) });
       }
       case "wish_remove": await db.from("wishes").delete().eq("id", str(p.wishId, 40)); return json(await loadState());
       case "wish_update": {
@@ -339,7 +397,13 @@ Deno.serve(async (req) => {
       case "kid_add": { const n = str(p.name, 20).trim(); if (n) await db.from("kids").insert({ name: n }); return json(await loadState()); }
       case "kid_rename": { const n = str(p.name, 20).trim(); if (n) await db.from("kids").update({ name: n }).eq("id", str(p.kidId, 40)); return json(await loadState()); }
       case "kid_remove": await db.from("kids").delete().eq("id", str(p.kidId, 40)); return json(await loadState());
-      case "voices": return json({ voices: await elVoices(), map: await voiceMap(), characters: Object.fromEntries(Object.entries(CH).map(([k, v]) => [k, v.name])) });
+      case "voices": return json({ voices: await elVoices(), map: await voiceMap(), characters: Object.fromEntries(SOLO().map((k) => [k, CH[k].name])) });
+      case "chat_log": {
+        const { data, error } = await db.from("chat_log").select("id,call_id,character,role,content,created_at").eq("kid_id", str(p.kidId, 40)).order("id", { ascending: false }).limit(400);
+        if (error) throw new Upstream("database", error.message);
+        return json({ log: data ?? [] });
+      }
+      case "chat_clear": await db.from("chat_log").delete().eq("kid_id", str(p.kidId, 40)); return json({ log: [] });
       case "voice_set": {
         if (!CH[p.character]) return json({ error: "bad_character" }, 400);
         const map = await voiceMap(); map[p.character] = str(p.voiceId, 60);

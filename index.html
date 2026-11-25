@@ -63,6 +63,12 @@ code{background:rgba(0,0,0,.3);padding:2px 6px;border-radius:6px;font-size:15px;
 .face{width:92px;height:92px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--tint,#24566a);overflow:hidden}
 .contact.star .face{width:116px;height:116px}
 .face svg{width:100%;height:100%;display:block}
+.face.emoji{font-size:54px;line-height:1}
+.speaker .face.emoji{font-size:84px}
+.bubble .who{font-size:15px;font-weight:600;color:#b23a48;margin-bottom:2px}
+.log{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow-y:auto;background:rgba(0,0,0,.2);border-radius:14px;padding:10px}
+.log .call{font-size:13px;opacity:.7;margin-top:8px}
+.log .line{font-size:15px}.log .line b{font-weight:600}.log .line.event{font-style:italic;opacity:.8}
 .row{display:flex;gap:10px;align-items:center}
 .row.wrap{flex-wrap:wrap}
 .grow{flex:1;min-width:0}
@@ -161,7 +167,7 @@ ol.steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
       <div class="speaker"><div class="face" id="callFace"></div></div>
     </div>
     <div class="scroll" id="callScroll">
-      <div class="bubble" id="bubble" aria-live="polite" hidden><div class="bubble-text" id="bubbleText"></div></div>
+      <div class="bubble" id="bubble" aria-live="polite" hidden><div class="who" id="bubbleWho" hidden></div><div class="bubble-text" id="bubbleText"></div></div>
       <div class="heard" id="heard" hidden></div>
       <div class="stage" id="stage"></div>
     </div>
@@ -231,6 +237,7 @@ const ART = {
   mrs: svg(`<circle cx="60" cy="24" r="12" fill="#f1f1ee"/><path d="M34 96Q60 112 86 96L92 120L28 120Z" fill="#d8425a"/><path d="M34 97Q60 111 86 97" stroke="#fff" stroke-width="8" fill="none" stroke-linecap="round"/><circle cx="60" cy="66" r="28" fill="#f3c9a5"/><path d="M30 64Q28 30 60 30Q92 30 90 64Q84 46 60 46Q36 46 30 64Z" fill="#f1f1ee"/><circle cx="52" cy="31" r="3" fill="#d8425a"/><circle cx="58" cy="28" r="3" fill="#d8425a"/><ellipse cx="67" cy="31" rx="6" ry="3" fill="#35a37b"/><circle cx="49" cy="67" r="2.600" fill="#10222c"/><circle cx="71" cy="67" r="2.600" fill="#10222c"/><circle cx="49" cy="67" r="7.500" fill="none" stroke="#b8860b" stroke-width="1.800"/><circle cx="71" cy="67" r="7.500" fill="none" stroke="#b8860b" stroke-width="1.800"/><path d="M56.500 67H63.500" stroke="#b8860b" stroke-width="1.800"/><circle cx="42" cy="78" r="4.500" fill="#ef9a9a" opacity=".7"/><circle cx="78" cy="78" r="4.500" fill="#ef9a9a" opacity=".7"/><ellipse class="mouth" cx="60" cy="83" rx="6" ry="3" fill="#b23a48"/>`),
   comet: svg(`<path d="M44 36Q36 20 30 10M40 26Q30 26 24 20M76 36Q84 20 90 10M80 26Q90 26 96 20" stroke="#8b5e34" stroke-width="5" fill="none" stroke-linecap="round"/><ellipse cx="30" cy="48" rx="10" ry="6" fill="#a8733f" transform="rotate(-25 30 48)"/><ellipse cx="90" cy="48" rx="10" ry="6" fill="#a8733f" transform="rotate(25 90 48)"/><ellipse cx="60" cy="62" rx="26" ry="30" fill="#b9834a"/><ellipse cx="60" cy="80" rx="17" ry="14" fill="#e7cda5"/><ellipse cx="60" cy="73" rx="7" ry="5" fill="#3a2a20"/><circle cx="48" cy="56" r="3.600" fill="#10222c"/><circle cx="72" cy="56" r="3.600" fill="#10222c"/><circle cx="49" cy="55" r="1.100" fill="#fff"/><circle cx="73" cy="55" r="1.100" fill="#fff"/><ellipse class="mouth" cx="60" cy="86" rx="5" ry="2.500" fill="#7a4a3a"/><path d="M40 100Q60 110 80 100" stroke="#35a37b" stroke-width="7" fill="none" stroke-linecap="round"/><circle cx="60" cy="110" r="6" fill="#f4c95d"/>`),
   pepper: svg(`<path d="M36 70Q26 90 32 110" stroke="#b5532a" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M84 70Q94 90 88 110" stroke="#b5532a" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M34 62L14 52L36 76Z" fill="#f3c9a5"/><path d="M86 62L106 52L84 76Z" fill="#f3c9a5"/><circle cx="60" cy="68" r="26" fill="#f3c9a5"/><path d="M34 64Q36 42 60 42Q84 42 86 64Q72 52 60 54Q48 52 34 64Z" fill="#b5532a"/><path d="M34 48Q56 -4 96 14Q72 22 86 48Z" fill="#35a37b"/><circle cx="97" cy="14" r="5" fill="#f4c95d"/><path d="M33 48Q60 38 87 48" stroke="#d8425a" stroke-width="7" fill="none" stroke-linecap="round"/><circle cx="50" cy="69" r="3" fill="#10222c"/><circle cx="70" cy="69" r="3" fill="#10222c"/><circle cx="43" cy="77" r="4.500" fill="#ef9a9a" opacity=".7"/><circle cx="77" cy="77" r="4.500" fill="#ef9a9a" opacity=".7"/><circle cx="56" cy="75" r=".9" fill="#b5532a"/><circle cx="60" cy="76" r=".9" fill="#b5532a"/><circle cx="64" cy="75" r=".9" fill="#b5532a"/><ellipse class="mouth" cx="60" cy="83" rx="5.500" ry="2.800" fill="#b23a48"/>`),
+  herd: svg(`<g transform="translate(4 6)"><path d="M22 18Q18 8 14 3M20 12Q14 12 11 8M38 18Q42 8 46 3M40 12Q46 12 49 8" stroke="#8b5e34" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="30" cy="32" rx="14" ry="16" fill="#a8733f"/><ellipse cx="30" cy="42" rx="9" ry="7" fill="#e7cda5"/><ellipse cx="30" cy="38" rx="4" ry="3" fill="#3a2a20"/><circle cx="24" cy="29" r="2" fill="#10222c"/><circle cx="36" cy="29" r="2" fill="#10222c"/><ellipse class="mouth" cx="30" cy="45" rx="3" ry="1.500" fill="#7a4a3a"/></g><g transform="translate(56 6)"><path d="M22 18Q18 8 14 3M20 12Q14 12 11 8M38 18Q42 8 46 3M40 12Q46 12 49 8" stroke="#8b5e34" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="30" cy="32" rx="14" ry="16" fill="#c79a63"/><ellipse cx="30" cy="42" rx="9" ry="7" fill="#e7cda5"/><ellipse cx="30" cy="38" rx="4" ry="3" fill="#3a2a20"/><circle cx="24" cy="29" r="2" fill="#10222c"/><circle cx="36" cy="29" r="2" fill="#10222c"/><ellipse class="mouth" cx="30" cy="45" rx="3" ry="1.500" fill="#7a4a3a"/></g><g transform="translate(30 54)"><path d="M22 18Q18 8 14 3M20 12Q14 12 11 8M38 18Q42 8 46 3M40 12Q46 12 49 8" stroke="#8b5e34" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="30" cy="32" rx="14" ry="16" fill="#b9834a"/><ellipse cx="30" cy="42" rx="9" ry="7" fill="#e7cda5"/><ellipse cx="30" cy="38" rx="4" ry="3" fill="#3a2a20"/><circle cx="24" cy="29" r="2" fill="#10222c"/><circle cx="36" cy="29" r="2" fill="#10222c"/><ellipse class="mouth" cx="30" cy="45" rx="3" ry="1.500" fill="#7a4a3a"/></g>`),
   flurry: svg(`<path d="M36 94Q60 108 84 94" stroke="#d8425a" stroke-width="10" fill="none" stroke-linecap="round"/><circle cx="60" cy="66" r="30" fill="#fff" stroke="#cfe3ea" stroke-width="2"/><path d="M32 52Q60 8 88 52Z" fill="#3aa6b9"/><rect x="28" y="46" width="64" height="12" rx="6" fill="#2b7f8f"/><circle cx="60" cy="20" r="8" fill="#fff"/><circle cx="48" cy="68" r="3.600" fill="#10222c"/><circle cx="72" cy="68" r="3.600" fill="#10222c"/><path d="M60 73L84 79L60 82Z" fill="#f08a3c"/><ellipse class="mouth" cx="57" cy="89" rx="6" ry="2.600" fill="#10222c"/>`)
 };
 const CH = {
@@ -238,9 +245,12 @@ const CH = {
   mrs: { name: "Mrs. Claus", tag: "Cookies and news", tint: "#8a4a5a" },
   comet: { name: "Comet", tag: "Sleigh team reindeer", tint: "#4a6a3f" },
   pepper: { name: "Pepper", tag: "Toy workshop elf", tint: "#2c6b55" },
-  flurry: { name: "Flurry", tag: "Very silly snowman", tint: "#2b6f86" }
+  flurry: { name: "Flurry", tag: "Very silly snowman", tint: "#2b6f86" },
+  rudolph: { name: "Rudolph", tag: "Lights the way", tint: "#6b2433", emoji: "🦌" },
+  herd: { name: "The Reindeer", tag: "All on speakerphone", tint: "#3d5a47" }
 };
-const ORDER = ["santa", "mrs", "comet", "pepper", "flurry"];
+const ORDER = ["santa", "mrs", "rudolph", "herd", "comet", "pepper", "flurry"];
+const SOLO = ORDER.filter(id => id !== "herd");
 const IDEAS = [["🪀", "Toys", "a fun toy"], ["👧", "Dolls", "a doll"], ["🧱", "Building", "a building set"], ["🎨", "Art", "an art and craft kit"],
   ["🧸", "Stuffies", "a stuffed animal"], ["📚", "Books", "a book"], ["🧩", "Games", "a game or puzzle"], ["🛴", "Ride-ons", "a bike or scooter"],
   ["👗", "Dress-up", "dress-up clothes"], ["🔬", "Science", "a science kit"], ["🎵", "Music", "a musical toy"], ["🎁", "Surprise", "a surprise that girls my age love"]];
@@ -288,7 +298,7 @@ function renderHome() {
   for (const id of ORDER) {
     const c = CH[id];
     box.append(h("button", { class: "contact" + (id === "santa" ? " star" : ""), type: "button", "aria-label": "Call " + c.name, onclick: () => startCall(id) },
-      h("span", { class: "face", style: "--tint:" + c.tint, html: ART[id] }),
+      ART[id] ? h("span", { class: "face", style: "--tint:" + c.tint, html: ART[id] }) : h("span", { class: "face emoji", style: "--tint:" + c.tint }, c.emoji),
       h("span", {}, h("span", { class: "who" }, c.name), h("br"), h("span", { class: "tag" }, c.tag))));
   }
 }
@@ -412,7 +422,14 @@ function paintStatus() {
   if (call.t0) { const s = Math.floor((Date.now() - call.t0) / 1000); t = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") + (t ? " · " + t : ""); }
   $("callStatus").textContent = t;
 }
-function bubble(text) { const b = $("bubble"), t = $("bubbleText"); b.hidden = false; t.textContent = text; t.scrollTop = 0; $("callScroll").scrollTop = 0; }
+function bubble(text, who) { const b = $("bubble"), t = $("bubbleText"), w = $("bubbleWho"); b.hidden = false; w.hidden = !who; w.textContent = who || ""; t.textContent = text; t.scrollTop = 0; $("callScroll").scrollTop = 0; }
+// one voice, or several clips in a row when the reindeer team is on speakerphone
+async function speakOut(resp, tok) {
+  if (call) call.skipSpeech = false;
+  if (resp.parts && resp.parts.length) {
+    for (const part of resp.parts) { if (!alive(tok) || call.skipSpeech) return; bubble(part.text, part.speaker); await playSpeech(part.audio); }
+  } else { bubble(resp.say); await playSpeech(resp.audio); }
+}
 // while a character speaks, keep the words being said in view inside the bubble
 function followSpeech() {
   const t = $("bubbleText"); let on = true;
@@ -433,15 +450,15 @@ async function startCall(id) {
   player.src = SILENT; const pr = player.play(); if (pr && pr.catch) pr.catch(() => {});
   wakeAudio();
 
-  const ch = CH[id], tok = String(Date.now()) + Math.random();
+  const ch = CH[id], tok = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   call = { id, ch, kid: kidById(curKid), tok, t0: 0, tick: 0, history: [], mode: "ringing", label: "Calling…" };
   $("callName").textContent = ch.name; $("callStatus").textContent = "Calling…";
-  const f = $("callFace"); f.style.setProperty("--tint", ch.tint); f.innerHTML = ART[id];
+  const f = $("callFace"); f.style.setProperty("--tint", ch.tint); f.classList.toggle("emoji", !ART[id]); if (ART[id]) f.innerHTML = ART[id]; else f.textContent = ch.emoji;
   $("bubble").hidden = true; heardNote(""); stage.replaceChildren(); $("mic").dataset.s = "thinking";
   $("call").classList.add("ringing"); show("call");
 
   let first = null, failed = null;
-  const startP = api("talk", { event: "start", character: id, kidId: call.kid.id, history: [], songs: songList() }).then(r => { first = r; }, e => { failed = e; });
+  const startP = api("talk", { event: "start", character: id, kidId: call.kid.id, callId: tok, history: [], songs: songList() }).then(r => { first = r; }, e => { failed = e; });
   const micP = getMic().then(ok => { micOk = ok; dropMic(); });   // ask permission now, but keep the mic closed while sound plays
   for (let i = 0; i < 4 && alive(tok) && (i === 0 || (!first && !failed)); i++) await playUrl(RING, 3500);
   await Promise.all([startP, micP]);
@@ -471,8 +488,8 @@ async function handle(resp, tok) {
   if (resp.heard) call.history.push({ role: "user", content: resp.heard });
   call.history.push({ role: "assistant", content: resp.say });
   heardNote(resp.heard && resp.heard[0] !== "(" ? resp.heard : "");
-  bubble(resp.say); setMode("speaking", "");
-  await playSpeech(resp.audio);
+  setMode("speaking", "");
+  await speakOut(resp, tok);
   if (!alive(tok)) return;
   const a = resp.action;
   if (a && a.type === "options") return showOptions(a.wish, [], tok);
@@ -508,7 +525,7 @@ async function playMusic(key, tok) {
 async function send(payload) {
   if (!call) return;
   const tok = call.tok; call.panelOpen = false; stopAudio(); stage.replaceChildren(dots()); setMode("thinking", "Thinking…");
-  try { const resp = await api("talk", { character: call.id, kidId: call.kid.id, history: call.history, songs: songList(), ...payload }); if (alive(tok)) { stage.replaceChildren(); await handle(resp, tok); } }
+  try { const resp = await api("talk", { character: call.id, kidId: call.kid.id, callId: tok, history: call.history, songs: songList(), ...payload }); if (alive(tok)) { stage.replaceChildren(); await handle(resp, tok); } }
   catch (e) { if (alive(tok)) lineTrouble(e); }
 }
 async function listen() {
@@ -553,12 +570,14 @@ async function listen() {
       // a flat line means the phone is not giving us a sound level; fall back to tap-to-finish
       if (el > 800 && (peak < 0.004 || (actx && actx.state !== "running"))) { manual = true; setMode("listening", MANUAL); }
     }
-    if (manual) { if (el > 8000) finish(true); return; }
-    if (started && speechMs >= 240 && now - lastSpeech > 1300) finish(true);
-    else if (!started && el > 9000) finish(false);
-    else if (el > 16000) finish(started);
+    if (manual) { if (el > 12000) finish(true); return; }
+    if (started && speechMs >= 240 && now - lastSpeech > pauseMs()) finish(true);
+    else if (!started && el > 12000) finish(false);
+    else if (el > 30000) finish(started);
   }, 60);
 }
+// how long a quiet gap must last before the app decides she has finished talking
+function pauseMs() { const v = Number(store.get("npp-pause")); return v >= 1000 && v <= 8000 ? v : 3000; }
 function stopListening(sendIt) { if (call && call.mode === "listening" && call.finish) call.finish(sendIt); }
 
 function picNode(o, cls) {
@@ -578,31 +597,31 @@ async function showOptions(wish, exclude, tok) {
   if (!alive(tok)) return;
   setMode("options", "Looking in the workshop…"); stage.replaceChildren(dots());
   let resp;
-  try { resp = await api("options", { character: call.id, kidId: call.kid.id, wish, exclude }); } catch (e) { if (alive(tok)) lineTrouble(e); return; }
+  try { resp = await api("options", { character: call.id, kidId: call.kid.id, callId: tok, wish, exclude }); } catch (e) { if (alive(tok)) lineTrouble(e); return; }
   if (!alive(tok)) return;
   call.history.push({ role: "assistant", content: resp.say });
-  bubble(resp.say); setMode("options", "Tap the one you like");
+  setMode("options", "Tap the one you like");
   stage.replaceChildren(...resp.options.map(o => giftCard(o, () => choose(o, tok))), h("div", { class: "choices" },
     h("button", { type: "button", onclick: () => { stopAudio(); showOptions(wish, exclude.concat(resp.options.map(o => o.name)), tok); } }, "Show different ones"),
     h("button", { type: "button", onclick: () => send({ text: "I want something different instead." }) }, "Something else")));
-  playSpeech(resp.audio);
+  speakOut(resp, tok);
 }
 async function choose(o, tok) {
   if (!alive(tok) || call.mode !== "options") return;
-  stopAudio(); setMode("thinking", "Writing it down…"); stage.replaceChildren(giftCard(o, null), dots());
+  call.skipSpeech = true; stopAudio(); setMode("thinking", "Writing it down…"); stage.replaceChildren(giftCard(o, null), dots());
   let resp;
-  try { resp = await api("pick", { character: call.id, kidId: call.kid.id, option: o }); } catch (e) { if (alive(tok)) lineTrouble(e); return; }
+  try { resp = await api("pick", { character: call.id, kidId: call.kid.id, callId: tok, option: o }); } catch (e) { if (alive(tok)) lineTrouble(e); return; }
   if (!alive(tok)) return;
   take(resp);
   call.history.push({ role: "user", content: `(She tapped "${o.name}". It is now on her list.)` }, { role: "assistant", content: resp.say });
-  stage.replaceChildren(giftCard(o, null)); bubble(resp.say); setMode("speaking", "");
-  await playSpeech(resp.audio);
+  stage.replaceChildren(giftCard(o, null)); setMode("speaking", "");
+  await speakOut(resp, tok);
   if (!alive(tok)) return;
   stage.replaceChildren(); listen();
 }
 function openPanel(kind) {
   if (!call || call.mode === "thinking" || call.mode === "ringing") return;
-  call.panelOpen = true; stopListening(false); stopAudio();
+  call.panelOpen = true; call.skipSpeech = true; stopListening(false); stopAudio();
   const tok = call.tok;
   setTimeout(() => {
     if (!alive(tok) || !call.panelOpen) return;
@@ -671,6 +690,28 @@ function renderParent() {
     if (cart.length) panel.append(h("a", { class: "cartlink", target: "_blank", rel: "noopener",
       href: "https://www.amazon.com/gp/aws/cart/add.html?" + cart.map((w, i) => `ASIN.${i + 1}=${w.asin}&Quantity.${i + 1}=1`).join("&") },
       `Add ${k.name}'s ${cart.length} ${cart.length === 1 ? "item" : "items"} to my Amazon cart`));
+    const logBox = h("div", {});
+    const logBtn = h("button", { class: "btn-quiet", type: "button", onclick: async () => {
+      logBtn.disabled = true; logBtn.textContent = "Loading…";
+      try {
+        const d = await api("chat_log", { kidId: k.id });
+        const box = h("div", { class: "log" }); let last = null;
+        if (!d.log.length) box.append(h("p", { class: "muted" }, "No conversations saved yet."));
+        for (const r of d.log.slice().reverse()) {
+          if (r.call_id !== last) { last = r.call_id; box.append(h("div", { class: "call" }, new Date(r.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + " · call with " + r.character)); }
+          box.append(h("div", { class: "line" + (r.role === "event" ? " event" : "") }, r.role === "event" ? r.content : [h("b", {}, (r.role === "child" ? k.name : r.character) + ": "), r.content]));
+        }
+        let armed = false;
+        const clear = h("button", { class: "btn-quiet", type: "button", onclick: async () => {
+          if (!armed) { armed = true; clear.textContent = "Tap again to delete for good"; return; }
+          try { await api("chat_clear", { kidId: k.id }); logBox.replaceChildren(h("p", { class: "muted" }, "Chat history deleted.")); } catch (e) {}
+        } }, "Delete " + k.name + "'s chat history");
+        logBox.replaceChildren(box, clear); box.scrollTop = box.scrollHeight;
+        logBtn.textContent = "Refresh conversations";
+      } catch (e) { logBtn.textContent = "Could not load. Try again"; }
+      logBtn.disabled = false;
+    } }, "See " + k.name + "'s conversations");
+    panel.append(logBtn, logBox);
     if (mine.length) {
       const copy = h("button", { class: "btn-quiet", type: "button", onclick: () => {
         const text = k.name + "'s Christmas list\n" + mine.map(w => `- ${w.name}${w.bought ? " (bought)" : ""}: ${stores(w)[0][1]}`).join("\n");
@@ -680,6 +721,11 @@ function renderParent() {
     }
     body.append(panel);
   }
+  const pauseSel = h("select", { id: "pauseSel", "aria-label": "Listening patience", onchange: e => store.set("npp-pause", e.target.value) },
+    [[1500, "1.5 seconds (quick talkers)"], [2200, "About 2 seconds"], [3000, "3 seconds"], [4000, "4 seconds"], [5500, "5.5 seconds (lots of thinking time)"]]
+      .map(([v, t]) => h("option", { value: v, selected: pauseMs() === v }, t)));
+  body.append(h("div", { class: "panel" }, h("h3", {}, "Listening"),
+    h("p", { class: "muted" }, "How long a quiet gap lasts before the app decides she has finished talking. Saved on this device."), pauseSel));
   const names = h("div", { class: "panel" }, h("h3", {}, "Callers"));
   for (const k of state.kids) names.append(h("div", { class: "row" },
     h("div", { class: "grow" }, h("input", { type: "text", id: "kid-" + k.id, value: k.name, maxlength: "20", "aria-label": "Name", onchange: e => { const n = e.target.value.trim(); if (n) act("kid_rename", { kidId: k.id, name: n }); } })),
@@ -694,7 +740,7 @@ function renderParent() {
     loadBtn.disabled = true; loadBtn.textContent = "Loading…";
     try {
       const d = await api("voices"); loadBtn.remove();
-      for (const id of ORDER) {
+      for (const id of SOLO) {
         const sel = h("select", { id: "voice-" + id, "aria-label": "Voice for " + CH[id].name, onchange: async e => { try { await api("voice_set", { character: id, voiceId: e.target.value }); } catch (err) {} } },
           d.voices.map(v => h("option", { value: v.id, selected: d.map[id] === v.id }, v.name + ([v.gender, v.age].filter(Boolean).length ? " (" + [v.gender, v.age].filter(Boolean).join(", ") + ")" : ""))));
         const prev = h("button", { class: "btn-quiet", type: "button", onclick: async () => {
@@ -737,7 +783,7 @@ $("hang").addEventListener("click", hangUp);
 $("mic").addEventListener("click", () => {
   if (!call) return;
   if (call.mode === "listening") stopListening(true);
-  else if (call.mode === "speaking" || call.mode === "music") stopAudio();
+  else if (call.mode === "speaking" || call.mode === "music") { call.skipSpeech = true; stopAudio(); }
   else if (call.mode === "idle") { if (micOk) { call.panelOpen = false; stage.replaceChildren(); listen(); } else openPanel("type"); }
 });
 $("ideasBtn").addEventListener("click", () => openPanel("ideas"));
